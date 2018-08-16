@@ -2,10 +2,50 @@ package view
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"fmt"
 )
+
+func Example()  {
+	// equals to call: view.NewRenderer() + r.MustInitialize()
+	r := NewInitialized(func(r *Renderer) {
+		// setting default layout
+		r.Layout = "layout" // equals to "layout.tpl"
+		// templates dir. will auto load on init.
+		r.ViewsDir = "testdata"
+	})
+
+	// fmt.Println(r.TemplateNames(true))
+
+	bf := new(bytes.Buffer)
+
+	// render template string
+	r.String(bf, `hello {{.}}`, "tom")
+	fmt.Print(bf.String()) // hello tom
+
+	// render template without layout
+	r.Partial(bf, "home", "tom")
+	bf.Reset()
+
+	// render with default layout
+	r.Render(bf, "home", "tom")
+	bf.Reset()
+
+	// render with custom layout
+	r.Render(bf, "home", "tom", "site/layout")
+	bf.Reset()
+
+	// load named template by string
+	r.LoadString("my-page", "welcome {{.}}")
+	// now, you can use "my-page" as an template name
+	r.Partial(bf, "my-page", "tom") // welcome tom
+	bf.Reset()
+
+	// more ways for load templates
+	r.LoadByGlob("some/path/*", "some/path")
+	r.LoadFiles("path/file1.tpl", "path/file2.tpl")
+}
 
 func TestRenderer_AddFunc(t *testing.T) {
 	art := assert.New(t)
@@ -26,41 +66,62 @@ func TestRenderer_Initialize(t *testing.T) {
 	art := assert.New(t)
 
 	r := &Renderer{}
-	r.AddFunc("test", func() {})
-	r.AddFuncMap(map[string]interface{}{
-		"test1": func() {},
-	})
+	r.AddFunc("test", func() string { return "" })
 
+	r = &Renderer{Debug: true}
+	r.AddFuncMap(map[string]interface{}{
+		"test1": func() string { return "" },
+	})
 	err := r.Initialize()
 	art.Nil(err)
 	// re-init
 	art.Nil(r.Initialize())
+	art.NotNil(r.Templates())
 
+	r.LoadByGlob("testdata/site/*.tpl", "testdata/site")
+	art.Len(r.TemplateFiles(), 5)
+
+	tpl := r.Template("header")
+	art.NotNil(tpl)
+	tpl = r.Template("header.tpl")
+	art.NotNil(tpl)
+
+	bf := new(bytes.Buffer)
 	r1 := NewRenderer()
 	art.Panics(func() {
-		bf := new(bytes.Buffer)
 		r1.Render(bf, "", nil)
 	})
 
-	bf := new(bytes.Buffer)
+	// use layout
 	r = NewInitialized(func(r *Renderer) {
 		r.Layout = "layout"
 		r.ViewsDir = "testdata/admin"
 	})
 
-	err = r.Render(bf, "home", "tom")
-	art.Nil(err)
-
-	fmt.Println(bf.String())
-
 	// including itself.
 	art.Len(r.LoadedTemplates(), 5+1)
+
+	bf.Reset()
+	err = r.Render(bf, "home.tpl", "tom")
+	art.Nil(err)
+	str := bf.String()
+	art.Contains(str, "admin header")
+	art.Contains(str, "home: hello")
+	art.Contains(str, "admin footer")
+
+	art.Panics(func() {
+		r.Render(bf, "home.tpl", "tom", "not-exist.tpl")
+	})
 
 	r = NewInitialized(func(r *Renderer) {
 		r.Layout = "layout"
 		r.ViewsDir = "testdata"
 	})
 
+	ns := r.TemplateNames(true)
+	art.Contains(ns, "header")
+	art.Contains(ns, "admin/header")
+	art.Contains(ns, "site/header")
 }
 
 func TestRenderer_LoadByGlob(t *testing.T) {
@@ -90,6 +151,21 @@ func TestRenderer_LoadByGlob(t *testing.T) {
 	art.Equal("hello tom", bf.String())
 }
 
+func TestRenderer_LoadFiles(t *testing.T) {
+	art := assert.New(t)
+	bf := new(bytes.Buffer)
+	r := NewInitialized()
+	r.LoadFiles("testdata/hello.tpl")
+
+	err := r.Render(bf, "testdata/hello", "tom")
+	art.Nil(err)
+	art.Equal("hello tom", bf.String())
+
+	art.Panics(func() {
+		r.LoadFiles("not-exist.tpl")
+	})
+}
+
 func TestRenderer_String(t *testing.T) {
 	art := assert.New(t)
 	r := NewRenderer()
@@ -114,9 +190,24 @@ func TestRenderer_String(t *testing.T) {
 	art.Equal("hello tom", bf.String())
 
 	bf.Reset()
+	err = r.String(bf, `hello {{. | upper}}`, "tom")
+	art.Nil(err)
+	art.Equal("hello TOM", bf.String())
+
+	bf.Reset()
+	err = r.String(bf, `hello {{. | lower}}`, "TOM")
+	art.Nil(err)
+	art.Equal("hello tom", bf.String())
+
+	bf.Reset()
 	err = r.String(bf, `hello {{. | ucFirst}}`, "tom")
 	art.Nil(err)
 	art.Equal("hello Tom", bf.String())
+
+	bf.Reset()
+	err = r.String(bf, `hello {{. | ucFirst}}`, "")
+	art.Nil(err)
+	art.Equal("hello ", bf.String())
 
 	bf.Reset()
 	err = r.String(bf, `hello {{.|raw}}`, "<i id=\"icon\"></i>")
@@ -138,7 +229,7 @@ func TestRenderer_LoadStrings(t *testing.T) {
 	bf := new(bytes.Buffer)
 	art := assert.New(t)
 	r := NewRenderer(func(r *Renderer) {
-		r.Debug = true
+		// r.Debug = true
 		r.Layout = "layout"
 	})
 	r.Initialize()
@@ -150,12 +241,13 @@ func TestRenderer_LoadStrings(t *testing.T) {
 		"footer":       `is footer:{{.}}`,
 		"home":         `hello {{.name}}`,
 		"admin/home":   `1 at {{current}}:{{.}}`,
-		"admin/login":  `2 at {{current}}:{{.}}`,
+		"admin/login":  `2 at {{current}}:{{ . }}`,
+		"other":        `at {{current}}:{{ include "not-exist" }}`,
 	})
 
 	r.LoadString("admin/reg", `main: hello {{.}}`)
 
-	ldNames := r.LoadedNames()
+	ldNames := r.TemplateNames()
 	art.Contains(ldNames, `"home"`)
 	art.Contains(ldNames, `"admin/reg"`)
 	art.Contains(ldNames, `"admin/home"`)
@@ -191,6 +283,11 @@ func TestRenderer_LoadStrings(t *testing.T) {
 	art.Nil(err)
 	art.Equal("hello tom", bf.String())
 
+	// include not exist
+	bf.Reset()
+	err = r.Partial(bf, "other", M{"name": "tom"})
+	art.Nil(err)
+	art.Equal("at other:", bf.String())
 }
 
 func TestRenderer_Partial(t *testing.T) {

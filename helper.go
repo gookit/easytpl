@@ -30,9 +30,6 @@ var globalFuncMap = template.FuncMap{
 	"yield": func() (string, error) {
 		return "", fmt.Errorf("yield called with no layout defined")
 	},
-	"partial": func() (string, error) {
-		return "", fmt.Errorf("partial called with no layout defined")
-	},
 	// add a empty func for compile
 	"current": func() string {
 		return ""
@@ -44,15 +41,15 @@ func (r *Renderer) LoadedTemplates() []*template.Template {
 	return r.templates.Templates()
 }
 
-// LoadedFiles returns loaded template files
-func (r *Renderer) LoadedFiles() map[string]string {
+// TemplateFiles returns loaded template files
+func (r *Renderer) TemplateFiles() map[string]string {
 	return r.fileMap
 }
 
-// LoadedNames returns loaded template names
-func (r *Renderer) LoadedNames(formats ...bool) string {
+// TemplateNames returns loaded template names
+func (r *Renderer) TemplateNames(format ...bool) string {
 	str := r.templates.DefinedTemplates()
-	if len(formats) != 1 || formats[0] == false {
+	if len(format) != 1 || format[0] == false {
 		return str
 	}
 
@@ -66,17 +63,16 @@ func (r *Renderer) Templates() *template.Template {
 
 // Template get template instance by name
 func (r *Renderer) Template(name string) *template.Template {
-	return r.templates.Lookup(name)
+	return r.templates.Lookup(r.cleanExt(name))
 }
 
-// CleanExt will clean file ext
+// cleanExt will clean file ext
 // eg
 // 		"some.tpl" -> "some"
 // 		"path/some.tpl" -> "path/some"
-func (r *Renderer) CleanExt(name string) string {
+func (r *Renderer) cleanExt(name string) string {
 	if len(r.ExtNames) == 0 {
-		r.ExtNames = []string{DefExt}
-		r.extMap[DefExt] = 0
+		return name
 	}
 
 	// has ext

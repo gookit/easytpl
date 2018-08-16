@@ -11,9 +11,8 @@ import (
 	"strings"
 )
 
-const (
-	DefExt = ".tpl"
-)
+// DefaultExt name
+const DefaultExt = ".tpl"
 
 // M a short type for map[string]interface{}
 type M map[string]interface{}
@@ -55,7 +54,7 @@ type Renderer struct {
 	FuncMap template.FuncMap
 	// DisableLayout disable layout. default is False
 	DisableLayout bool
-	// AutoSearchFile auto search template file, when not found on compiled templates. default is False
+	// AutoSearchFile TODO)auto search template file, when not found on compiled templates. default is False
 	AutoSearchFile bool
 }
 
@@ -125,7 +124,7 @@ func (r *Renderer) Initialize() error {
 
 	r.debugf("begin initialize the view renderer")
 	if len(r.ExtNames) == 0 {
-		r.ExtNames = []string{DefExt}
+		r.ExtNames = []string{DefaultExt}
 	}
 
 	r.extMap = make(map[string]uint8, len(r.ExtNames))
@@ -140,7 +139,7 @@ func (r *Renderer) Initialize() error {
 	// add template func
 	r.AddFuncMap(globalFuncMap)
 	r.AddFunc("include", func(tplName string, data ...interface{}) (template.HTML, error) {
-		if r.templates.Lookup(tplName) != nil {
+		if r.Template(tplName) != nil {
 			var v interface{}
 			if len(data) == 1 {
 				v = data[0]
@@ -207,7 +206,7 @@ func (r *Renderer) LoadByGlob(pattern string, baseDirs ...string) {
 	}
 }
 
-// LoadFiles load template files
+// LoadFiles load template files.
 // usage:
 // 		r.LoadFiles("path/file1.tpl", "path/file2.tpl")
 func (r *Renderer) LoadFiles(files ...string) {
@@ -226,7 +225,9 @@ func (r *Renderer) LoadFiles(files ...string) {
 	}
 }
 
-// LoadString load template string
+// LoadString load named template string.
+// usage:
+//
 func (r *Renderer) LoadString(tplName string, tplString string) {
 	r.ensureTemplates()
 	r.debugf("load named template string, name is: %s", tplName)
@@ -235,7 +236,7 @@ func (r *Renderer) LoadString(tplName string, tplString string) {
 	template.Must(r.newTemplate(tplName).Parse(tplString))
 }
 
-// LoadString load template strings
+// LoadStrings load multi named template strings
 func (r *Renderer) LoadStrings(sMap map[string]string) {
 	for name, tplStr := range sMap {
 		r.LoadString(name, tplStr)
@@ -341,7 +342,6 @@ func (r *Renderer) Partial(w io.Writer, tplName string, data interface{}) error 
 		panicErr(fmt.Errorf("please call Initialize(), before render template"))
 	}
 
-	tplName = r.CleanExt(tplName)
 	str, err := r.executeTemplate(tplName, data)
 	if err != nil {
 		return err
@@ -367,6 +367,7 @@ func (r *Renderer) String(w io.Writer, tplString string, data interface{}) error
 func (r *Renderer) executeTemplate(name string, data interface{}) (string, error) {
 	// get a buffer from the pool to write to.
 	buf := r.bufPool.get()
+	name = r.cleanExt(name)
 
 	// find template instance by name
 	tpl := r.templates.Lookup(name)
@@ -393,20 +394,20 @@ func (r *Renderer) executeTemplate(name string, data interface{}) (string, error
 
 // name the template name
 func (r *Renderer) addLayoutFuncs(layout, name string, data interface{}) {
-	tpl := r.templates.Lookup(layout)
+	tpl := r.Template(layout)
 	if tpl == nil {
 		panicErr(fmt.Errorf("the layout template: %s is not found, want render: %s", layout, name))
 	}
 
-	includeHandler := func(tplName string) (template.HTML, error) {
-		if r.templates.Lookup(tplName) != nil {
-			str, err := r.executeTemplate(tplName, data)
-			// Return safe HTML here since we are rendering our own template.
-			return template.HTML(str), err
-		}
-
-		return "", nil
-	}
+	// includeHandler := func(tplName string) (template.HTML, error) {
+	// 	if r.templates.Lookup(tplName) != nil {
+	// 		str, err := r.executeTemplate(tplName, data)
+	// 		// Return safe HTML here since we are rendering our own template.
+	// 		return template.HTML(str), err
+	// 	}
+	//
+	// 	return "", nil
+	// }
 
 	r.debugf("add funcs[yield, partial] to layout template: %s, target template: %s", layout, name)
 	funcMap := template.FuncMap{
@@ -416,7 +417,7 @@ func (r *Renderer) addLayoutFuncs(layout, name string, data interface{}) {
 		},
 		// will add data to included template
 		// "include": includeHandler,
-		"partial": includeHandler,
+		// "partial": includeHandler,
 	}
 
 	tpl.Funcs(funcMap)
