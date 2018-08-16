@@ -5,24 +5,22 @@
 [![Coverage Status](https://coveralls.io/repos/github/gookit/view/badge.svg?branch=master)](https://coveralls.io/github/gookit/view?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gookit/view)](https://goreportcard.com/report/github.com/gookit/view)
 
-A simple view renderer based on the golang `html/template` package, but much simpler to use. Support layout rendering, including templates.
+一个简单的视图渲染器，基于golang `html/template` 封装，但更加简单易用。支持布局渲染，引入其他模板。
 
-> **[中文说明](README_cn.md)**
+> **[EN README](README.md)**
 
-## Features
-
-- simple to use
-- support layout render. 
+- 简单更易使用
+- 支持布局渲染
   - eg `{{ include "header" }} {{ yield }} {{ include "footer" }}`
-- support include other templates. eg `{{ include "other" }}`
-- built-in some helper methods `row`, `lower`, `upper`, `join` ...
+- 支持引入其他模板 eg `{{ include "other" }}`
+- 内置一些常用的模板方法 `row`, `lower`, `upper`, `join` ...
 
 ## Godoc
 
 - [godoc for gopkg](https://godoc.org/gopkg.in/gookit/view.v1)
 - [godoc for github](https://godoc.org/github.com/gookit/view)
 
-## Usage
+## 快速使用
 
 ```go
 package main
@@ -74,9 +72,9 @@ func main()  {
 }
 ```
 
-> more API please [GoDoc](https://godoc.org/github.com/gookit/view) 
+> 跟多API请参考 [GoDoc](https://godoc.org/github.com/gookit/view) 
 
-## Options
+## 可以选项
 
 ```go
 // ViewsDir the default views directory
@@ -95,7 +93,7 @@ DisableLayout bool
 AutoSearchFile bool
 ```
 
-### Apply options
+### 应用选项
 
 ```go
 // method 1
@@ -118,7 +116,7 @@ r := NewInitialized(func (r *Renderer) {
 })
 ```
 
-## Reference
+## 参考
 
 - https://github.com/unrolled/render
 - https://github.com/thedevsaddam/renderer
