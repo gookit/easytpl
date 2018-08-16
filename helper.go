@@ -1,9 +1,9 @@
 package view
 
 import (
-	"strings"
-	"html/template"
 	"fmt"
+	"html/template"
+	"strings"
 )
 
 var globalFuncMap = template.FuncMap{
@@ -11,8 +11,8 @@ var globalFuncMap = template.FuncMap{
 	"raw": func(s string) template.HTML {
 		return template.HTML(s)
 	},
-	"trim": strings.TrimSpace,
-	"join": strings.Join,
+	"trim":  strings.TrimSpace,
+	"join":  strings.Join,
 	"lower": strings.ToLower,
 	"upper": strings.ToUpper,
 	// uppercase first char
@@ -33,14 +33,20 @@ var globalFuncMap = template.FuncMap{
 	"partial": func() (string, error) {
 		return "", fmt.Errorf("partial called with no layout defined")
 	},
-	"current": func() (string, error) {
-		return "", nil
+	// add a empty func for compile
+	"current": func() string {
+		return ""
 	},
 }
 
-// LoadedTemplates returns loaded template instances
+// LoadedTemplates returns loaded template instances, including ROOT itself.
 func (r *Renderer) LoadedTemplates() []*template.Template {
 	return r.templates.Templates()
+}
+
+// LoadedFiles returns loaded template files
+func (r *Renderer) LoadedFiles() map[string]string {
+	return r.fileMap
 }
 
 // LoadedNames returns loaded template names
@@ -92,8 +98,8 @@ func (r *Renderer) IsValidExt(ext string) bool {
 
 func (r *Renderer) getLayoutName(settings []string) string {
 	var layout string
-	disableLayout := r.DisableLayout
 
+	disableLayout := r.DisableLayout
 	if len(settings) > 0 {
 		layout = strings.TrimSpace(settings[0])
 		if layout == "" {
@@ -111,8 +117,14 @@ func (r *Renderer) getLayoutName(settings []string) string {
 	return ""
 }
 
+func (r *Renderer) debugf(format string, args ...interface{}) {
+	if r.Debug {
+		fmt.Printf("view: [DEBUG] "+format+"\n", args...)
+	}
+}
+
 func panicErr(err error) {
 	if err != nil {
-		panic("view renderer: " + err.Error())
+		panic("view: [ERROR] " + err.Error())
 	}
 }

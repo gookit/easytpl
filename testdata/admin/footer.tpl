@@ -1,1 +1,1 @@
-<h1>hello {{.}}, at admin footer</h1>
+hello {{.}}, at admin {{ current }}
