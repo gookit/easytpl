@@ -1,0 +1,1 @@
+<h1>hello at site other.tpl</h1>
