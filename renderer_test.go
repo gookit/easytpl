@@ -2,12 +2,12 @@ package view
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"fmt"
 )
 
-func Example()  {
+func Example() {
 	// equals to call: view.NewRenderer() + r.MustInitialize()
 	r := NewInitialized(func(r *Renderer) {
 		// setting default layout
@@ -36,7 +36,7 @@ func Example()  {
 	r.Render(bf, "home", "tom", "site/layout")
 	bf.Reset()
 
-	// load named template by string
+	// load named template string
 	r.LoadString("my-page", "welcome {{.}}")
 	// now, you can use "my-page" as an template name
 	r.Partial(bf, "my-page", "tom") // welcome tom
@@ -67,6 +67,12 @@ func TestRenderer_Initialize(t *testing.T) {
 
 	r := &Renderer{}
 	r.AddFunc("test", func() string { return "" })
+	art.Panics(func() {
+		r.LoadFiles("testdata/home.tpl")
+	})
+	art.Panics(func() {
+		r.LoadByGlob("testdata/site/*.tpl", "testdata/site")
+	})
 
 	r = &Renderer{Debug: true}
 	r.AddFuncMap(map[string]interface{}{

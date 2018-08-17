@@ -53,6 +53,7 @@ func (r *Renderer) TemplateNames(format ...bool) string {
 		return str
 	}
 
+	str = strings.TrimLeft(str, "; ")
 	return strings.NewReplacer(":", ":\n", ",", "\n").Replace(str)
 }
 

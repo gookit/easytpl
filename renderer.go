@@ -1,3 +1,12 @@
+/*
+Package ini is a simple view renderer based on the `html/template`, but much simpler to use.
+
+Source code and other details for the project are available at GitHub:
+
+	https://github.com/gookit/view
+
+Usage please see example.
+*/
 package view
 
 import (
@@ -152,6 +161,10 @@ func (r *Renderer) Initialize() error {
 		return "", nil
 	})
 
+	if r.fileMap == nil {
+		r.fileMap = make(map[string]string)
+	}
+
 	// compile templates
 	if err := r.compileTemplates(); err != nil {
 		return err
@@ -176,13 +189,12 @@ func (r *Renderer) MustInitialize() {
 // 		r.LoadByGlob("views/*")
 // 		r.LoadByGlob("views/**/*")
 func (r *Renderer) LoadByGlob(pattern string, baseDirs ...string) {
-	r.ensureTemplates()
+	if !r.initialized {
+		panicErr(fmt.Errorf("please call Initialize(), before load templates"))
+	}
+
 	paths, err := filepath.Glob(pattern)
 	panicErr(err)
-
-	if r.fileMap == nil {
-		r.fileMap = make(map[string]string)
-	}
 
 	var baseDir, relPath string
 	if len(baseDirs) == 1 {
@@ -210,10 +222,8 @@ func (r *Renderer) LoadByGlob(pattern string, baseDirs ...string) {
 // usage:
 // 		r.LoadFiles("path/file1.tpl", "path/file2.tpl")
 func (r *Renderer) LoadFiles(files ...string) {
-	r.ensureTemplates()
-
-	if r.fileMap == nil {
-		r.fileMap = make(map[string]string)
+	if !r.initialized {
+		panicErr(fmt.Errorf("please call Initialize(), before load templates"))
 	}
 
 	for _, file := range files {
@@ -227,7 +237,9 @@ func (r *Renderer) LoadFiles(files ...string) {
 
 // LoadString load named template string.
 // usage:
-//
+// 	r.LoadString("my-page", "welcome {{.}}")
+// 	// now, you can use "my-page" as an template name
+// 	r.Partial(w, "my-page", "tom") // welcome tom
 func (r *Renderer) LoadString(tplName string, tplString string) {
 	r.ensureTemplates()
 	r.debugf("load named template string, name is: %s", tplName)
@@ -306,7 +318,7 @@ func (r *Renderer) loadTemplateFile(tplName, file string) {
 	}
 
 	r.fileMap[tplName] = file
-	r.debugf("load template file: %s, and template name is: %s", file, tplName)
+	r.debugf("load template file: %s, template name is: %s", file, tplName)
 
 	// create new template in the templates
 	template.Must(r.newTemplate(tplName).Parse(string(bs)))
