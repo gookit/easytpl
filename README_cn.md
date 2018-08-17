@@ -153,41 +153,48 @@ http.ListenAndServe(":9100", nil)
 ## 可用选项
 
 ```go
-// Debug setting
+// 开启调试
 Debug bool
-// ViewsDir the default views directory
+// 默认的视图模板目录
 ViewsDir string
-// Layout template name
+// 布局模板名称
 Layout string
-// Delims define for template
+// 模板变量分隔符定义
 Delims TplDelims
-// ExtNames allowed template extensions. eg {"tpl", "html"}
+// 允许的模板扩展. eg {"tpl", "html"}
 ExtNames []string
-// FuncMap func map for template
+// 添加自定义模板函数
 FuncMap template.FuncMap
-// DisableLayout disable layout. default is False
+// 禁用布局。默认值为False
 DisableLayout bool
-// AutoSearchFile auto search template file, when not found on compiled templates. default is False
+// TODO 如果在已编译模板上找不到，自动查找模板文件。默认值为False
 AutoSearchFile bool
 ```
 
 ### 应用选项
 
+- 方法 1
+
 ```go
-// method 1
 r := NewRenderer()
 r.Layout = "layouts/default"
 // ... ...
 r.MustInitialize()
+```
 
-// method 2
+- 方法 2
+
+```go
 r := NewRenderer(func (r *Renderer) {
 	r.Layout = "layouts/default"
 	// ... ...
 })
 r.MustInitialize()
+```
 
-// method 3
+- 方法 3 (简单快捷)
+
+```go
 r := NewInitialized(func (r *Renderer) {
 	r.Layout = "layouts/default" 
 	// ... ...

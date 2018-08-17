@@ -182,6 +182,7 @@ r.Layout = "layouts/default"
 // ... ...
 r.MustInitialize()
 ```
+
 - method 2
 
 ```go
