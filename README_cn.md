@@ -15,7 +15,7 @@
 - 支持引入其他模板 eg `{{ include "other" }}`
 - 内置一些常用的模板方法 `row`, `lower`, `upper`, `join` ...
 
-## Godoc
+## GoDoc
 
 - [godoc for gopkg](https://godoc.org/gopkg.in/gookit/view.v1)
 - [godoc for github](https://godoc.org/github.com/gookit/view)
@@ -36,7 +36,7 @@ func main()  {
 	r := view.NewInitialized(func(r *view.Renderer) {
 		// 设置默认布局模板
 		r.Layout = "layout" // 等同于 "layout.tpl"
-		// 模板目录。将在初始化是自动加载里面的模板文件
+		// 模板目录。将在初始化是自动加载编译里面的模板文件
 		r.ViewsDir = "testdata"
 		// 添加模板函数
 		r.AddFunc("myFunc", func() string {
@@ -208,4 +208,4 @@ r := NewInitialized(func (r *Renderer) {
 
 ## License
 
-**MIT**
+**[MIT](License)**
