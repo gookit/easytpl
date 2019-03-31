@@ -1,11 +1,15 @@
 package view
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"strings"
+	"sync"
 )
 
+// match '{{ extend "parent.tpl" }}'
+// var extendsRegex = regexp.MustCompile(`{{ *?extends +?"(.+?)" *?}}`)
 var globalFuncMap = template.FuncMap{
 	// don't escape content
 	"raw": func(s string) template.HTML {
@@ -34,40 +38,12 @@ var globalFuncMap = template.FuncMap{
 	"current": func() string {
 		return ""
 	},
+	"extends": func(name string) string {
+		return ""
+	},
 }
 
-// LoadedTemplates returns loaded template instances, including ROOT itself.
-func (r *Renderer) LoadedTemplates() []*template.Template {
-	return r.templates.Templates()
-}
-
-// TemplateFiles returns loaded template files
-func (r *Renderer) TemplateFiles() map[string]string {
-	return r.fileMap
-}
-
-// TemplateNames returns loaded template names
-func (r *Renderer) TemplateNames(format ...bool) string {
-	str := r.templates.DefinedTemplates()
-	if len(format) != 1 || format[0] == false {
-		return str
-	}
-
-	str = strings.TrimLeft(str, "; ")
-	return strings.NewReplacer(":", ":\n", ",", "\n").Replace(str)
-}
-
-// Templates returns root template instance
-func (r *Renderer) Templates() *template.Template {
-	return r.templates
-}
-
-// Template get template instance by name
-func (r *Renderer) Template(name string) *template.Template {
-	return r.templates.Lookup(r.cleanExt(name))
-}
-
-// cleanExt will clean file ext
+// CleanExt will clean file ext.
 // eg
 // 		"some.tpl" -> "some"
 // 		"path/some.tpl" -> "path/some"
@@ -87,12 +63,6 @@ func (r *Renderer) cleanExt(name string) string {
 	return name
 }
 
-// IsValidExt check is valid ext name
-func (r *Renderer) IsValidExt(ext string) bool {
-	_, ok := r.extMap[ext]
-	return ok
-}
-
 func (r *Renderer) getLayoutName(settings []string) string {
 	var layout string
 
@@ -106,11 +76,10 @@ func (r *Renderer) getLayoutName(settings []string) string {
 		layout = r.Layout
 	}
 
-	// apply layout
+	// Apply layout
 	if !disableLayout && layout != "" {
 		return layout
 	}
-
 	return ""
 }
 
@@ -124,4 +93,33 @@ func panicErr(err error) {
 	if err != nil {
 		panic("view: [ERROR] " + err.Error())
 	}
+}
+
+/*************************************************************
+ * buffer Pool
+ *************************************************************/
+
+// bufferPool A bufferPool is a type-safe wrapper around a sync.Pool.
+type bufferPool struct {
+	p *sync.Pool
+}
+
+// newBufferPool constructs a new bufferPool.
+func newBufferPool() *bufferPool {
+	return &bufferPool{&sync.Pool{
+		New: func() interface{} {
+			return &bytes.Buffer{}
+		},
+	}}
+}
+
+// Get retrieves a Buffer from the pool, creating one if necessary.
+func (bp bufferPool) get() *bytes.Buffer {
+	buf := bp.p.Get().(*bytes.Buffer)
+	return buf
+}
+
+func (bp bufferPool) put(buf *bytes.Buffer) {
+	buf.Reset()
+	bp.p.Put(buf)
 }

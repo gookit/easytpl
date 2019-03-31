@@ -1,15 +1,16 @@
 package main
 
 import (
-	"github.com/gookit/view"
-	"net/http"
 	"fmt"
+	"net/http"
+
+	"github.com/gookit/view"
 )
 
 var v *view.Renderer
 
 // go run ./_examples/demo.go
-func main()  {
+func main() {
 	// equals to call: view.NewRenderer() + r.MustInitialize()
 	v = view.NewInitialized(func(r *view.Renderer) {
 		// setting default layout
@@ -33,7 +34,7 @@ func main()  {
 	http.ListenAndServe(":9100", nil)
 }
 
-func addRoutes()  {
+func addRoutes() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("<h1>hello, welcome</h1>"))
 	})

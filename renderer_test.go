@@ -3,8 +3,10 @@ package view
 import (
 	"bytes"
 	"fmt"
-	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Example() {
@@ -21,25 +23,25 @@ func Example() {
 	bf := new(bytes.Buffer)
 
 	// render template string
-	r.String(bf, `hello {{.}}`, "tom")
+	_ = r.String(bf, `hello {{.}}`, "tom")
 	fmt.Print(bf.String()) // hello tom
 
 	// render template without layout
-	r.Partial(bf, "home", "tom")
+	_ = r.Partial(bf, "home", "tom")
 	bf.Reset()
 
 	// render with default layout
-	r.Render(bf, "home", "tom")
+	_ = r.Render(bf, "home", "tom")
 	bf.Reset()
 
 	// render with custom layout
-	r.Render(bf, "home", "tom", "site/layout")
+	_ = r.Render(bf, "home", "tom", "site/layout")
 	bf.Reset()
 
 	// load named template string
 	r.LoadString("my-page", "welcome {{.}}")
 	// now, you can use "my-page" as an template name
-	r.Partial(bf, "my-page", "tom") // welcome tom
+	_ = r.Partial(bf, "my-page", "tom") // welcome tom
 	bf.Reset()
 
 	// more ways for load templates
@@ -65,16 +67,16 @@ func TestRenderer_AddFunc(t *testing.T) {
 func TestRenderer_Initialize(t *testing.T) {
 	art := assert.New(t)
 
-	r := &Renderer{}
-	r.AddFunc("test", func() string { return "" })
+	// r := &Renderer{}
+	AddFunc("test", func() string { return "" })
 	art.Panics(func() {
-		r.LoadFiles("testdata/home.tpl")
+		LoadFiles("testdata/home.tpl")
 	})
 	art.Panics(func() {
-		r.LoadByGlob("testdata/site/*.tpl", "testdata/site")
+		LoadByGlob("testdata/site/*.tpl", "testdata/site")
 	})
 
-	r = &Renderer{Debug: true}
+	r := &Renderer{Debug: true}
 	r.AddFuncMap(map[string]interface{}{
 		"test1": func() string { return "" },
 	})
@@ -95,7 +97,7 @@ func TestRenderer_Initialize(t *testing.T) {
 	bf := new(bytes.Buffer)
 	r1 := NewRenderer()
 	art.Panics(func() {
-		r1.Render(bf, "", nil)
+		_ = r1.Render(bf, "", nil)
 	})
 
 	// use layout
@@ -116,7 +118,7 @@ func TestRenderer_Initialize(t *testing.T) {
 	art.Contains(str, "admin footer")
 
 	art.Panics(func() {
-		r.Render(bf, "home.tpl", "tom", "not-exist.tpl")
+		_ = r.Render(bf, "home.tpl", "tom", "not-exist.tpl")
 	})
 
 	r = NewInitialized(func(r *Renderer) {
@@ -139,9 +141,10 @@ func TestRenderer_LoadByGlob(t *testing.T) {
 	})
 	r.LoadByGlob("testdata/*")
 	// r.LoadByGlob("testdata/*.tpl")
-	err := r.Render(bf, "hello", "tom")
+	err := r.Render(bf, "not-exist", "tom")
 	art.Error(err)
 	bf.Reset()
+
 	err = r.Render(bf, "testdata/hello", "tom")
 	art.Nil(err)
 	art.Equal("hello tom", bf.String())
@@ -152,6 +155,7 @@ func TestRenderer_LoadByGlob(t *testing.T) {
 	r.LoadByGlob("testdata/*", "testdata/")
 	// r.LoadByGlob("testdata/*.tpl")
 	bf.Reset()
+
 	err = r.Render(bf, "hello", "tom")
 	art.Nil(err)
 	art.Equal("hello tom", bf.String())
@@ -238,7 +242,7 @@ func TestRenderer_LoadStrings(t *testing.T) {
 		// r.Debug = true
 		r.Layout = "layout"
 	})
-	r.Initialize()
+	art.NoError(r.Initialize())
 
 	r.LoadStrings(map[string]string{
 		"layout":       `{{ include "header" . }}, at layout, {{ yield }}, {{ include "footer" }}`,
@@ -304,4 +308,67 @@ func TestRenderer_Partial(t *testing.T) {
 
 	err := r.Partial(bf, "not-exist", nil)
 	art.Error(err)
+}
+
+func _TestUseExtends(t *testing.T) {
+	bf := new(bytes.Buffer)
+	is := assert.New(t)
+
+	r := NewInitialized(func(r *Renderer) {
+		r.Debug = true
+		// r.ViewsDir = "testdata/extends"
+	})
+	r.LoadStrings(map[string]string{
+		"home": `{{ extends "layout" . }}
+{{ define "body" }} hello {{.}}{{ end }}`,
+		// layout file
+		"layout": `{{ block "header" . }}header{{ end }}
+{{ block "body" . }}default{{ end }}
+{{ block "footer" . }}footer{{ end }}`,
+	})
+
+	err := r.Execute(bf, "layout", "inhere")
+	is.Nil(err)
+	is.Equal("header\n hello inhere\nfooter", bf.String())
+	bf.Reset()
+
+	err = r.Execute(bf, "home", "inhere")
+	is.Nil(err)
+	is.Equal("header\n hello \nfooter\n", bf.String())
+}
+
+func _Example_Extends() {
+	r := NewInitialized()
+	// load templates
+	r.LoadStrings(map[string]string{
+		// layout template file
+		"layout.tpl": `{{ block "header" . }}header{{ end }}
+{{ block "body" . }}default{{ end }}
+{{ block "footer" . }}footer{{ end }}`,
+		// current page template
+		"home.tpl": `{{ extends "layout.tpl" . }}
+{{ define "body" }}hello {{.}}{{ end }}`,
+	})
+
+	fmt.Println("- render 'layout.tpl'")
+	err := r.Execute(os.Stdout, "layout", "inhere")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("\n- render 'home.tpl'")
+	err = r.Execute(os.Stdout, "home", "inhere")
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// - render 'layout.tpl'
+	// header
+	// default
+	// footer
+	// - render 'home.tpl'
+	// header
+	// default
+	// footer
 }

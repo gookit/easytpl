@@ -12,6 +12,8 @@ A simple view renderer based on the `html/template`, but much simpler to use. Su
 ## Features
 
 - simple to use
+- support loading multiple directories, multiple files
+- support rendering string templates, etc.
 - support layout render. 
   - eg `{{ include "header" }} {{ yield }} {{ include "footer" }}`
 - support include other templates. eg `{{ include "other" }}`
@@ -82,6 +84,16 @@ func main()  {
 
 ## Layout Example
 
+basic layout structure:
+
+```text
+{{ include "part0" }}{{ yield }}{{ include "part1" }}
+```
+
+> current template will render at `{{ yield }}`
+
+example files:
+
 ```text
 templates/
   |_ layouts/
@@ -92,7 +104,7 @@ templates/
   |_ about.tpl
 ```
 
-- templates/layouts/default.tpl
+- **layout:** `templates/layouts/default.tpl`
 
 ```html
 <html>
@@ -110,7 +122,7 @@ templates/
 </html>
 ```
 
-- templates/layouts/header.tpl
+- `templates/layouts/header.tpl`
 
 ```html
 <header>
@@ -118,7 +130,7 @@ templates/
 </header>
 ```
 
-- templates/layouts/footer.tpl
+- `templates/layouts/footer.tpl`
 
 ```html
 <footer>
@@ -126,7 +138,7 @@ templates/
 </footer>
 ```
 
-- templates/home.tpl
+- `templates/home.tpl`
 
 ```html
   <h1>Hello, {{ .Name | upper }}</h1>
@@ -156,12 +168,12 @@ http.ListenAndServe(":9100", nil)
 ```go
 // Debug setting
 Debug bool
-// ViewsDir the default views directory
-ViewsDir string
 // Layout template name
 Layout string
 // Delims define for template
 Delims TplDelims
+// ViewsDir the default views directory
+ViewsDir string
 // ExtNames allowed template extensions. eg {"tpl", "html"}
 ExtNames []string
 // FuncMap func map for template

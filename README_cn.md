@@ -5,19 +5,20 @@
 [![Coverage Status](https://coveralls.io/repos/github/gookit/view/badge.svg?branch=master)](https://coveralls.io/github/gookit/view?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gookit/view)](https://goreportcard.com/report/github.com/gookit/view)
 
-一个简单的视图渲染器，基于golang `html/template` 封装，但更加简单易用。支持布局渲染，引入其他模板。
+一个简单的视图渲染器，基于golang `html/template` 封装，但更加简单易用。
 
 > **[EN README](README.md)**
 
-- 简单更易使用
-- 支持布局渲染
+- 简单，易使用
+- 支持加载多目录，多文件
+- 支持渲染字符串模板等
+- 支持布局文件渲染
   - eg `{{ include "header" }} {{ yield }} {{ include "footer" }}`
 - 支持引入其他模板 eg `{{ include "other" }}`
 - 内置一些常用的模板方法 `row`, `lower`, `upper`, `join` ...
 
 ## GoDoc
 
-- [godoc for gopkg](https://godoc.org/gopkg.in/gookit/view.v1)
 - [godoc for github](https://godoc.org/github.com/gookit/view)
 
 ## 快速开始
@@ -50,25 +51,25 @@ func main()  {
 	bf := new(bytes.Buffer)
 
 	// 渲染模板字符串
-	r.String(bf, `hello {{.}}`, "tom")
+	_= r.String(bf, `hello {{.}}`, "tom")
 	fmt.Print(bf.String()) // hello tom
 
 	// 渲染模板，没有使用布局
-	r.Partial(bf, "home", "tom")
+	_= r.Partial(bf, "home", "tom")
 	bf.Reset()
 
 	// 使用默认布局渲染
-	r.Render(bf, "home", "tom")
+	_= r.Render(bf, "home", "tom")
 	bf.Reset()
 
 	// 使用自定义布局渲染
-	r.Render(bf, "home", "tom", "site/layout")
+	_= r.Render(bf, "home", "tom", "site/layout")
 	bf.Reset()
 	
 	// 加载命名的字符串模板
 	r.LoadString("my-page", "welcome {{.}}")
 	// now, you can use "my-page" as an template name
-	r.Partial(bf, "my-page", "tom") // welcome tom
+	_= r.Partial(bf, "my-page", "tom") // welcome tom
 	bf.Reset()
 	
 	// 更多加载模板的方法
@@ -94,7 +95,7 @@ templates/
 - templates/layouts/default.tpl
 
 ```html
-<html>
+<html lang="en">
   <head>
     <title>layout example</title>
   </head>
@@ -208,4 +209,4 @@ r := NewInitialized(func (r *Renderer) {
 
 ## License
 
-**[MIT](License)**
+**[MIT](LICENSE)**
