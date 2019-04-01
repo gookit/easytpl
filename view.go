@@ -33,6 +33,16 @@ type TplDelims struct {
 // create an default instance
 var defView = NewRenderer()
 
+// Revert the default instance
+func Revert() {
+	defView = NewRenderer()
+}
+
+// Default get default instance
+func Default() *Renderer {
+	return defView
+}
+
 /*************************************************************
  * internal methods
  *************************************************************/

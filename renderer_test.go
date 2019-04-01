@@ -75,13 +75,15 @@ func TestRenderer_Initialize(t *testing.T) {
 	art.Panics(func() {
 		LoadByGlob("testdata/site/*.tpl", "testdata/site")
 	})
-
-	r := &Renderer{Debug: true}
-	r.AddFuncMap(map[string]interface{}{
+	AddFuncMap(map[string]interface{}{
 		"test1": func() string { return "" },
 	})
-	err := r.Initialize()
-	art.Nil(err)
+
+	r := Default()
+	r.Debug = true
+
+	art.NoError(r.Initialize())
+
 	// re-init
 	art.Nil(r.Initialize())
 	art.NotNil(r.Templates())
@@ -110,7 +112,7 @@ func TestRenderer_Initialize(t *testing.T) {
 	art.Len(r.LoadedTemplates(), 5+1)
 
 	bf.Reset()
-	err = r.Render(bf, "home.tpl", "tom")
+	err := r.Render(bf, "home.tpl", "tom")
 	art.Nil(err)
 	str := bf.String()
 	art.Contains(str, "admin header")
@@ -130,6 +132,8 @@ func TestRenderer_Initialize(t *testing.T) {
 	art.Contains(ns, "header")
 	art.Contains(ns, "admin/header")
 	art.Contains(ns, "site/header")
+
+	Revert() // Revert
 }
 
 func TestRenderer_LoadByGlob(t *testing.T) {

@@ -21,7 +21,6 @@ A simple view renderer based on the `html/template`, but much simpler to use. Su
 
 ## Godoc
 
-- [godoc for gopkg](https://godoc.org/gopkg.in/gookit/view.v1)
 - [godoc for github](https://godoc.org/github.com/gookit/view)
 
 ## Quick Start
@@ -30,9 +29,10 @@ A simple view renderer based on the `html/template`, but much simpler to use. Su
 package main
 
 import (
-	"github.com/gookit/view"
-	"fmt"
 	"bytes"
+	"fmt"
+	
+	"github.com/gookit/view"
 )
 
 func main()  {

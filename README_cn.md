@@ -27,9 +27,10 @@
 package main
 
 import (
-	"github.com/gookit/view"
-	"fmt"
 	"bytes"
+	"fmt"
+	
+	"github.com/gookit/view"
 )
 
 func main()  {
