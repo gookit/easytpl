@@ -1,4 +1,4 @@
-# View renderer
+# View Renderer
 
 [![GoDoc](https://godoc.org/github.com/gookit/view?status.svg)](https://godoc.org/github.com/gookit/view)
 [![Build Status](https://travis-ci.org/gookit/view.svg?branch=master)](https://travis-ci.org/gookit/view)
@@ -7,7 +7,7 @@
 
 A simple view renderer based on the `html/template`, but much simpler to use. Support layout rendering, including templates.
 
-> **[中文说明](README_cn.md)**
+> **[中文说明](README.zh-CN.md)**
 
 ## Features
 
