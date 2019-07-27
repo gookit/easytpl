@@ -25,7 +25,7 @@ var globalFuncMap = template.FuncMap{
 			f := s[0]
 			// is lower
 			if f >= 'a' && f <= 'z' {
-				return strings.ToUpper(string(f)) + string(s[1:])
+				return strings.ToUpper(string(f)) + s[1:]
 			}
 		}
 
