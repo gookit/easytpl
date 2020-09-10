@@ -74,7 +74,7 @@ func NewInitialized(fns ...func(r *Renderer)) *Renderer {
 
 // AddFunc add template func
 func AddFunc(name string, fn interface{}) {
-	defView.AddFunc(name, fn)
+	std.AddFunc(name, fn)
 }
 
 // AddFunc add template func
@@ -96,7 +96,7 @@ func (r *Renderer) AddFunc(name string, fn interface{}) {
 
 // AddFuncMap add template func map
 func AddFuncMap(fm template.FuncMap) {
-	defView.AddFuncMap(fm)
+	std.AddFuncMap(fm)
 }
 
 // AddFuncMap add template func map
@@ -114,10 +114,10 @@ func (r *Renderer) AddFuncMap(fm template.FuncMap) {
 func Initialize(fns ...func(r *Renderer)) {
 	// Apply config func
 	if len(fns) == 1 {
-		fns[0](defView)
+		fns[0](std)
 	}
 
-	defView.MustInitialize()
+	std.MustInitialize()
 }
 
 // Initialize templates in the viewsDir, add do some prepare works.
@@ -196,7 +196,7 @@ func (r *Renderer) MustInitialize() {
 
 // LoadByGlob load templates by glob pattern.
 func LoadByGlob(pattern string, baseDirs ...string) {
-	defView.LoadByGlob(pattern, baseDirs...)
+	std.LoadByGlob(pattern, baseDirs...)
 }
 
 // LoadByGlob load templates by glob pattern.
@@ -236,7 +236,7 @@ func (r *Renderer) LoadByGlob(pattern string, baseDirs ...string) {
 
 // LoadFiles load custom template files.
 func LoadFiles(files ...string) {
-	defView.LoadFiles(files...)
+	std.LoadFiles(files...)
 }
 
 // LoadFiles load custom template files.
@@ -258,7 +258,7 @@ func (r *Renderer) LoadFiles(files ...string) {
 
 // LoadString load named template string.
 func LoadString(tplName string, tplString string) {
-	defView.LoadString(tplName, tplString)
+	std.LoadString(tplName, tplString)
 }
 
 // LoadString load named template string.
@@ -276,7 +276,7 @@ func (r *Renderer) LoadString(tplName string, tplString string) {
 
 // LoadStrings load multi named template strings
 func LoadStrings(sMap map[string]string) {
-	defView.LoadStrings(sMap)
+	std.LoadStrings(sMap)
 }
 
 // LoadStrings load multi named template strings
@@ -292,7 +292,7 @@ func (r *Renderer) LoadStrings(sMap map[string]string) {
 
 // Render a template name/file and write to the Writer.
 func Render(w io.Writer, tplName string, v interface{}, layouts ...string) error {
-	return defView.Render(w, tplName, v, layouts...)
+	return std.Render(w, tplName, v, layouts...)
 }
 
 // Render a template name/file and write to the Writer.
@@ -317,7 +317,7 @@ func (r *Renderer) Render(w io.Writer, tplName string, v interface{}, layouts ..
 
 // Partial is alias of the Execute()
 func Partial(w io.Writer, tplName string, v interface{}) error {
-	return defView.Execute(w, tplName, v)
+	return std.Execute(w, tplName, v)
 }
 
 // Partial is alias of the Execute()
@@ -327,7 +327,7 @@ func (r *Renderer) Partial(w io.Writer, tplName string, v interface{}) error {
 
 // Execute render partial, will not render layout file
 func Execute(w io.Writer, tplName string, v interface{}) error {
-	return defView.Execute(w, tplName, v)
+	return std.Execute(w, tplName, v)
 }
 
 // Execute render partial, will not render layout file
@@ -347,7 +347,7 @@ func (r *Renderer) Execute(w io.Writer, tplName string, v interface{}) error {
 
 // String render a template string
 func String(w io.Writer, tplString string, v interface{}) error {
-	return defView.String(w, tplString, v)
+	return std.String(w, tplString, v)
 }
 
 // String render a template string

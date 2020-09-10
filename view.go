@@ -5,7 +5,7 @@ Source code and other details for the project are available at GitHub:
 
 	https://github.com/gookit/view
 
-Usage please see example.
+Usage please see example and README.
 */
 package view
 
@@ -31,16 +31,16 @@ type TplDelims struct {
 }
 
 // create an default instance
-var defView = NewRenderer()
+var std = NewRenderer()
 
 // Revert the default instance
 func Revert() {
-	defView = NewRenderer()
+	std = NewRenderer()
 }
 
 // Default get default instance
 func Default() *Renderer {
-	return defView
+	return std
 }
 
 /*************************************************************
