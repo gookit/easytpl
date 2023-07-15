@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gookit/view"
+	"github.com/gookit/easytpl"
 )
 
-var v *view.Renderer
+var v *easytpl.Renderer
 
 // go run ./_examples/demo.go
 func main() {
 	// equals to call: view.NewRenderer() + r.MustInitialize()
-	v = view.NewInitialized(func(r *view.Renderer) {
+	v = easytpl.NewInitialized(func(r *easytpl.Renderer) {
 		// setting default layout
 		r.Layout = "layout" // equals to "layout.tpl"
 		// templates dir. will auto load on init.

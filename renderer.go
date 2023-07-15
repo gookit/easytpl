@@ -1,4 +1,4 @@
-package view
+package easytpl
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ type Renderer struct {
 	// loaded files. {"tpl name": "file path"}
 	fileMap map[string]string
 	bufPool *bufferPool
-	// templates is root template instance.
+	// templates are root template instance.
 	// it is like a map, contains all parsed templates
 	// {
 	// 	"tpl name0": *template.Template,
@@ -201,9 +201,10 @@ func LoadByGlob(pattern string, baseDirs ...string) {
 
 // LoadByGlob load templates by glob pattern.
 // Usage:
-// 		r.LoadByGlob("views/*")
-// 		r.LoadByGlob("views/*.tpl") // add ext limit
-// 		r.LoadByGlob("views/**/*")
+//
+//	r.LoadByGlob("views/*")
+//	r.LoadByGlob("views/*.tpl") // add ext limit
+//	r.LoadByGlob("views/**/*")
 func (r *Renderer) LoadByGlob(pattern string, baseDirs ...string) {
 	if !r.initialized {
 		panicErr(fmt.Errorf("please call Initialize(), before load templates"))
@@ -241,7 +242,8 @@ func LoadFiles(files ...string) {
 
 // LoadFiles load custom template files.
 // Usage:
-// 		r.LoadFiles("path/file1.tpl", "path/file2.tpl")
+//
+//	r.LoadFiles("path/file1.tpl", "path/file2.tpl")
 func (r *Renderer) LoadFiles(files ...string) {
 	if !r.initialized {
 		panicErr(fmt.Errorf("please call Initialize(), before load templates"))
@@ -263,9 +265,10 @@ func LoadString(tplName string, tplString string) {
 
 // LoadString load named template string.
 // Usage:
-// 	r.LoadString("my-page", "welcome {{.}}")
-// 	// now, you can use "my-page" as an template name
-// 	r.Partial(w, "my-page", "tom") // welcome tom
+//
+//	r.LoadString("my-page", "welcome {{.}}")
+//	// now, you can use "my-page" as an template name
+//	r.Partial(w, "my-page", "tom") // welcome tom
 func (r *Renderer) LoadString(tplName string, tplString string) {
 	r.ensureTemplates()
 	r.debugf("load named template string, name is: %s", tplName)
@@ -296,15 +299,17 @@ func Render(w io.Writer, tplName string, v interface{}, layouts ...string) error
 }
 
 // Render a template name/file and write to the Writer.
+//
 // Usage:
-// 		renderer := view.NewRenderer()
-//  	// ... ...
-// 		// will apply global layout setting
-// 		renderer.Render(http.ResponseWriter, "user/login", data)
-// 		// apply custom layout file
-// 		renderer.Render(http.ResponseWriter, "user/login", data, "custom-layout")
-// 		// will disable apply layout render
-// 		renderer.Render(http.ResponseWriter, "user/login", data, "")
+//
+//			renderer := easytpl.NewRenderer()
+//	 	// ... ...
+//			// will apply global layout setting
+//			renderer.Render(http.ResponseWriter, "user/login", data)
+//			// apply custom layout file
+//			renderer.Render(http.ResponseWriter, "user/login", data, "custom-layout")
+//			// will disable apply layout render
+//			renderer.Render(http.ResponseWriter, "user/login", data, "")
 func (r *Renderer) Render(w io.Writer, tplName string, v interface{}, layouts ...string) error {
 	// Apply layout render
 	if layout := r.getLayoutName(layouts); layout != "" {

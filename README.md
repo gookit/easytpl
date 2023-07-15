@@ -1,11 +1,11 @@
-# View Renderer
+# EasyTpl
 
-[![GoDoc](https://godoc.org/github.com/gookit/view?status.svg)](https://godoc.org/github.com/gookit/view)
-[![Build Status](https://travis-ci.org/gookit/view.svg?branch=master)](https://travis-ci.org/gookit/view)
-[![Coverage Status](https://coveralls.io/repos/github/gookit/view/badge.svg?branch=master)](https://coveralls.io/github/gookit/view?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/gookit/view)](https://goreportcard.com/report/github.com/gookit/view)
+[![GoDoc](https://pkg.go.dev/github.com/gookit/easytpl?status.svg)](https://pkg.go.dev/github.com/gookit/easytpl)
+[![Coverage Status](https://coveralls.io/repos/github/gookit/easytpl/badge.svg?branch=master)](https://coveralls.io/github/gookit/easytpl?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/gookit/easytpl)](https://goreportcard.com/report/github.com/gookit/easytpl)
+[![Unit-Tests](https://github.com/gookit/easytpl/workflows/Unit-Tests/badge.svg)](https://github.com/gookit/easytpl/actions)
 
-A simple view renderer based on the `html/template`, but much simpler to use. Support layout rendering, including templates.
+A simple template renderer based on the `html/template`, but much simpler to use. Support layout rendering, including templates.
 
 > **[中文说明](README.zh-CN.md)**
 
@@ -21,7 +21,7 @@ A simple view renderer based on the `html/template`, but much simpler to use. Su
 
 ## Godoc
 
-- [godoc for github](https://godoc.org/github.com/gookit/view)
+- [godoc for github](https://pkg.go.dev/github.com/gookit/easytpl)
 
 ## Quick Start
 
@@ -32,12 +32,12 @@ import (
 	"bytes"
 	"fmt"
 	
-	"github.com/gookit/view"
+	"github.com/gookit/easytpl"
 )
 
 func main()  {
-	// equals to call: view.NewRenderer() + r.MustInitialize()
-	r := view.NewInitialized(func(r *view.Renderer) {
+	// equals to call: easytpl.NewRenderer() + r.MustInitialize()
+	r := easytpl.NewInitialized(func(r *easytpl.Renderer) {
 		// setting default layout
 		r.Layout = "layout" // equals to "layout.tpl"
 		// templates dir. will auto load on init.
@@ -80,7 +80,7 @@ func main()  {
 }
 ```
 
-> more API please [GoDoc](https://godoc.org/github.com/gookit/view) 
+> more APIS please [GoDoc](https://pkg.go.dev/github.com/gookit/easytpl) 
 
 ## Layout Example
 
@@ -149,7 +149,7 @@ templates/
 ### Usage
 
 ```go
-v := view.NewInitialized(func(r *view.Renderer) {
+v := easytpl.NewInitialized(func(r *easytpl.Renderer) {
     // setting default layout
     r.Layout = "layouts/default" // equals to "layouts/default.tpl"
     // templates dir. will auto load on init.
@@ -157,7 +157,7 @@ v := view.NewInitialized(func(r *view.Renderer) {
 })
 
 http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-	v.Render(w, "home", view.M{"Name": "tom"})
+	v.Render(w, "home", easytpl.M{"Name": "tom"})
 })
 log.Println("Listening port: 9100")
 http.ListenAndServe(":9100", nil)
@@ -189,7 +189,7 @@ AutoSearchFile bool
 - method 1
 
 ```go
-r := NewRenderer()
+r := easytpl.NewRenderer()
 r.Layout = "layouts/default"
 // ... ...
 r.MustInitialize()
@@ -198,7 +198,7 @@ r.MustInitialize()
 - method 2
 
 ```go
-r := NewRenderer(func (r *Renderer) {
+r := easytpl.NewRenderer(func (r *Renderer) {
 	r.Layout = "layouts/default"
 	// ... ...
 })
@@ -208,7 +208,7 @@ r.MustInitialize()
 - method 3
 
 ```go
-r := NewInitialized(func (r *Renderer) {
+r := easytpl.NewInitialized(func (r *Renderer) {
 	r.Layout = "layouts/default" 
 	// ... ...
 })

@@ -1,4 +1,4 @@
-package view
+package easytpl_test
 
 import (
 	"bytes"
@@ -6,12 +6,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/gookit/easytpl"
+	"github.com/gookit/goutil/testutil/assert"
 )
 
 func Example() {
-	// equals to call: view.NewRenderer() + r.MustInitialize()
-	r := NewInitialized(func(r *Renderer) {
+	// equals to call: easytpl.NewRenderer() + r.MustInitialize()
+	r := easytpl.NewInitialized(func(r *easytpl.Renderer) {
 		// setting default layout
 		r.Layout = "layout" // equals to "layout.tpl"
 		// templates dir. will auto load on init.
@@ -52,7 +53,7 @@ func Example() {
 func TestRenderer_AddFunc(t *testing.T) {
 	art := assert.New(t)
 
-	r := NewRenderer()
+	r := easytpl.NewRenderer()
 	r.AddFunc("test1", func() {})
 	art.Panics(func() {
 		r.AddFunc("test2", "invalid")
@@ -68,18 +69,18 @@ func TestRenderer_Initialize(t *testing.T) {
 	art := assert.New(t)
 
 	// r := &Renderer{}
-	AddFunc("test", func() string { return "" })
+	easytpl.AddFunc("test", func() string { return "" })
 	art.Panics(func() {
-		LoadFiles("testdata/home.tpl")
+		easytpl.LoadFiles("testdata/home.tpl")
 	})
 	art.Panics(func() {
-		LoadByGlob("testdata/site/*.tpl", "testdata/site")
+		easytpl.LoadByGlob("testdata/site/*.tpl", "testdata/site")
 	})
-	AddFuncMap(map[string]interface{}{
+	easytpl.AddFuncMap(map[string]interface{}{
 		"test1": func() string { return "" },
 	})
 
-	r := Default()
+	r := easytpl.Default()
 	r.Debug = true
 
 	art.NoError(r.Initialize())
@@ -97,13 +98,13 @@ func TestRenderer_Initialize(t *testing.T) {
 	art.NotNil(tpl)
 
 	bf := new(bytes.Buffer)
-	r1 := NewRenderer()
+	r1 := easytpl.NewRenderer()
 	art.Panics(func() {
 		_ = r1.Render(bf, "", nil)
 	})
 
 	// use layout
-	r = NewInitialized(func(r *Renderer) {
+	r = easytpl.NewInitialized(func(r *easytpl.Renderer) {
 		r.Layout = "layout"
 		r.ViewsDir = "testdata/admin"
 	})
@@ -123,7 +124,7 @@ func TestRenderer_Initialize(t *testing.T) {
 		_ = r.Render(bf, "home.tpl", "tom", "not-exist.tpl")
 	})
 
-	r = NewInitialized(func(r *Renderer) {
+	r = easytpl.NewInitialized(func(r *easytpl.Renderer) {
 		r.Layout = "layout"
 		r.ViewsDir = "testdata"
 	})
@@ -133,14 +134,14 @@ func TestRenderer_Initialize(t *testing.T) {
 	art.Contains(ns, "admin/header")
 	art.Contains(ns, "site/header")
 
-	Revert() // Revert
+	easytpl.Revert() // Revert
 }
 
 func TestRenderer_LoadByGlob(t *testing.T) {
 	bf := new(bytes.Buffer)
 	art := assert.New(t)
 
-	r := NewInitialized(func(r *Renderer) {
+	r := easytpl.NewInitialized(func(r *easytpl.Renderer) {
 		// r.Debug = true
 	})
 	r.LoadByGlob("testdata/*")
@@ -153,7 +154,7 @@ func TestRenderer_LoadByGlob(t *testing.T) {
 	art.Nil(err)
 	art.Equal("hello tom", bf.String())
 
-	r = NewInitialized(func(r *Renderer) {
+	r = easytpl.NewInitialized(func(r *easytpl.Renderer) {
 		// r.Debug = true
 	})
 	r.LoadByGlob("testdata/*", "testdata/")
@@ -168,7 +169,7 @@ func TestRenderer_LoadByGlob(t *testing.T) {
 func TestRenderer_LoadFiles(t *testing.T) {
 	art := assert.New(t)
 	bf := new(bytes.Buffer)
-	r := NewInitialized()
+	r := easytpl.NewInitialized()
 	r.LoadFiles("testdata/hello.tpl")
 
 	err := r.Render(bf, "testdata/hello", "tom")
@@ -182,7 +183,7 @@ func TestRenderer_LoadFiles(t *testing.T) {
 
 func TestRenderer_String(t *testing.T) {
 	art := assert.New(t)
-	r := NewRenderer()
+	r := easytpl.NewRenderer()
 	r.MustInitialize()
 
 	bf := new(bytes.Buffer)
@@ -192,7 +193,7 @@ func TestRenderer_String(t *testing.T) {
 	art.Equal("hello tom", bf.String())
 
 	bf.Reset()
-	err = r.String(bf, `hello {{.name}}`, M{"name": "tom"})
+	err = r.String(bf, `hello {{.name}}`, easytpl.M{"name": "tom"})
 	art.Nil(err)
 	art.Equal("hello tom", bf.String())
 
@@ -242,7 +243,7 @@ func TestRenderer_String(t *testing.T) {
 func TestRenderer_LoadStrings(t *testing.T) {
 	bf := new(bytes.Buffer)
 	art := assert.New(t)
-	r := NewRenderer(func(r *Renderer) {
+	r := easytpl.NewRenderer(func(r *easytpl.Renderer) {
 		// r.Debug = true
 		r.Layout = "layout"
 	})
@@ -293,13 +294,13 @@ func TestRenderer_LoadStrings(t *testing.T) {
 
 	// not use layout
 	bf.Reset()
-	err = r.Partial(bf, "home", M{"name": "tom"})
+	err = r.Partial(bf, "home", easytpl.M{"name": "tom"})
 	art.Nil(err)
 	art.Equal("hello tom", bf.String())
 
 	// include not exist
 	bf.Reset()
-	err = r.Partial(bf, "other", M{"name": "tom"})
+	err = r.Partial(bf, "other", easytpl.M{"name": "tom"})
 	art.Nil(err)
 	art.Equal("at other:", bf.String())
 }
@@ -308,7 +309,7 @@ func TestRenderer_Partial(t *testing.T) {
 	bf := new(bytes.Buffer)
 	art := assert.New(t)
 
-	r := NewInitialized()
+	r := easytpl.NewInitialized()
 
 	err := r.Partial(bf, "not-exist", nil)
 	art.Error(err)
@@ -318,7 +319,7 @@ func _TestUseExtends(t *testing.T) {
 	bf := new(bytes.Buffer)
 	is := assert.New(t)
 
-	r := NewInitialized(func(r *Renderer) {
+	r := easytpl.NewInitialized(func(r *easytpl.Renderer) {
 		r.Debug = true
 		// r.ViewsDir = "testdata/extends"
 	})
@@ -342,7 +343,7 @@ func _TestUseExtends(t *testing.T) {
 }
 
 func _Example_Extends() {
-	r := NewInitialized()
+	r := easytpl.NewInitialized()
 	// load templates
 	r.LoadStrings(map[string]string{
 		// layout template file

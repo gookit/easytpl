@@ -1,4 +1,4 @@
-package view
+package easytpl
 
 import (
 	"bytes"
@@ -45,8 +45,9 @@ var globalFuncMap = template.FuncMap{
 
 // CleanExt will clean file ext.
 // eg
-// 		"some.tpl" -> "some"
-// 		"path/some.tpl" -> "path/some"
+//
+//	"some.tpl" -> "some"
+//	"path/some.tpl" -> "path/some"
 func (r *Renderer) cleanExt(name string) string {
 	if len(r.ExtNames) == 0 {
 		return name
@@ -85,13 +86,13 @@ func (r *Renderer) getLayoutName(settings []string) string {
 
 func (r *Renderer) debugf(format string, args ...interface{}) {
 	if r.Debug {
-		fmt.Printf("view: [DEBUG] "+format+"\n", args...)
+		fmt.Printf("easytpl: [DEBUG] "+format+"\n", args...)
 	}
 }
 
 func panicErr(err error) {
 	if err != nil {
-		panic("view: [ERROR] " + err.Error())
+		panic("easytpl: [ERROR] " + err.Error())
 	}
 }
 

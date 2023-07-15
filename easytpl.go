@@ -1,13 +1,13 @@
 /*
-Package view is a simple view renderer based on the `html/template`, but much simpler to use.
+Package easytpl is a simple template renderer based on the `html/template`, but much simpler to use.
 
 Source code and other details for the project are available at GitHub:
 
-	https://github.com/gookit/view
+	https://github.com/gookit/easytpl
 
 Usage please see example and README.
 */
-package view
+package easytpl
 
 import (
 	"fmt"
@@ -66,7 +66,7 @@ func (r *Renderer) compileTemplates() error {
 		}
 
 		// Path is full path, rel is relative path
-		// eg. path: "testdata/admin/footer.tpl" -> rel: "admin/footer.tpl"
+		// e.g. path: "testdata/admin/footer.tpl" -> rel: "admin/footer.tpl"
 		rel, err := filepath.Rel(dir, path)
 		if err != nil {
 			return err
@@ -123,7 +123,7 @@ func (r *Renderer) executeByName(name string, v interface{}) (string, error) {
 	// Find template instance by name
 	tpl := r.templates.Lookup(name)
 	if tpl == nil {
-		return "", fmt.Errorf("view renderer: the template [%s] is not found", name)
+		return "", fmt.Errorf("easytpl: the template [%s] is not found", name)
 	}
 
 	return r.executeTemplate(tpl, v)

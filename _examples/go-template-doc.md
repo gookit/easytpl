@@ -37,7 +37,7 @@ Comments do not nest and must start and end at the delimiters, as shown here.
 {{pipeline}}
 ```
 
-he default textual representation (the same as would be printed by fmt.Print) of 
+he defaults textual representation (the same as would be printed by fmt.Print) of 
 the value of the pipeline is copied to the output.
 
     {{"output" | printf "%q"}}

@@ -1,9 +1,9 @@
-# View Renderer
+# EasyTpl
 
-[![GoDoc](https://godoc.org/github.com/gookit/view?status.svg)](https://pkg.go.dev/github.com/gookit/view)
-[![Build Status](https://travis-ci.org/gookit/view.svg?branch=master)](https://travis-ci.org/gookit/view)
-[![Coverage Status](https://coveralls.io/repos/github/gookit/view/badge.svg?branch=master)](https://coveralls.io/github/gookit/view?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/gookit/view)](https://goreportcard.com/report/github.com/gookit/view)
+[![GoDoc](https://pkg.go.dev/github.com/gookit/easytpl?status.svg)](https://pkg.go.dev/github.com/gookit/easytpl)
+[![Coverage Status](https://coveralls.io/repos/github/gookit/easytpl/badge.svg?branch=master)](https://coveralls.io/github/gookit/easytpl?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/gookit/easytpl)](https://goreportcard.com/report/github.com/gookit/easytpl)
+[![Unit-Tests](https://github.com/gookit/easytpl/workflows/Unit-Tests/badge.svg)](https://github.com/gookit/easytpl/actions)
 
 一个简单的视图渲染器，基于golang `html/template` 封装，但更加简单易用。
 
@@ -19,7 +19,7 @@
 
 ## GoDoc
 
-- [godoc for github](https://godoc.org/github.com/gookit/view)
+- [GoDoc for GitHub](https://pkg.go.dev/github.com/gookit/easytpl)
 
 ## 快速开始
 
@@ -30,12 +30,12 @@ import (
 	"bytes"
 	"fmt"
 	
-	"github.com/gookit/view"
+	"github.com/gookit/easytpl"
 )
 
 func main()  {
-	// NewInitialized() 等同于同时调用: view.NewRenderer() + r.MustInitialize()
-	r := view.NewInitialized(func(r *view.Renderer) {
+	// NewInitialized() 等同于同时调用: easytpl.NewRenderer() + r.MustInitialize()
+	r := easytpl.NewInitialized(func(r *easytpl.Renderer) {
 		// 设置默认布局模板
 		r.Layout = "layout" // 等同于 "layout.tpl"
 		// 模板目录。将在初始化是自动加载编译里面的模板文件
@@ -79,7 +79,7 @@ func main()  {
 }
 ```
 
-> 跟多API请参考 [GoDoc](https://godoc.org/github.com/gookit/view) 
+> 跟多API请参考 [GoDoc](https://pkg.go.dev/github.com/gookit/easytpl) 
 
 ## 布局示例
 
@@ -138,7 +138,7 @@ templates/
 ### 使用
 
 ```go
-v := view.NewInitialized(func(r *view.Renderer) {
+v := easytpl.NewInitialized(func(r *easytpl.Renderer) {
     // setting default layout
     r.Layout = "layouts/default" // equals to "layouts/default.tpl"
     // templates dir. will auto load on init.
@@ -146,7 +146,7 @@ v := view.NewInitialized(func(r *view.Renderer) {
 })
 
 http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-	v.Render(w, "home", view.M{"Name": "tom"})
+	v.Render(w, "home", easytpl.M{"Name": "tom"})
 })
 log.Println("Listening port: 9100")
 http.ListenAndServe(":9100", nil)
@@ -178,7 +178,7 @@ AutoSearchFile bool
 - 方法 1
 
 ```go
-r := NewRenderer()
+r := easytpl.NewRenderer()
 r.Layout = "layouts/default"
 // ... ...
 r.MustInitialize()
@@ -187,7 +187,7 @@ r.MustInitialize()
 - 方法 2
 
 ```go
-r := NewRenderer(func (r *Renderer) {
+r := easytpl.NewRenderer(func (r *Renderer) {
 	r.Layout = "layouts/default"
 	// ... ...
 })
@@ -197,7 +197,7 @@ r.MustInitialize()
 - 方法 3 (简单快捷)
 
 ```go
-r := NewInitialized(func (r *Renderer) {
+r := easytpl.NewInitialized(func (r *Renderer) {
 	r.Layout = "layouts/default" 
 	// ... ...
 })
