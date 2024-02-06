@@ -1,7 +1,6 @@
 package easytpl
 
 import (
-	"errors"
 	"fmt"
 	"html/template"
 	"os"
@@ -18,14 +17,16 @@ type Renderer struct {
 	// loaded files. {"tpl name": "file path"}
 	fileMap map[string]string
 	bufPool *bufferPool
-	// templates are root template instance.
-	// it is like a map, contains all parsed templates
+	// root It is the root template instance.
+	//
+	// It is like a map, contains all parsed root
+	//
 	// {
 	// 	"tpl name0": *template.Template,
 	// 	"tpl name1": *template.Template,
 	// 	... ...
 	// }
-	templates *template.Template
+	root *template.Template
 	// mark renderer is initialized
 	initialized bool
 	// from ViewsDir, split by comma
@@ -87,18 +88,15 @@ func (r *Renderer) WithConfig(fns ...ConfigFn) *Renderer {
 
 // AddFunc add template func
 func (r *Renderer) AddFunc(name string, fn any) {
-	if r.initialized {
-		panicErr(fmt.Errorf("cannot add template func after initialized"))
-	}
+	r.cannotInit("cannot add template func after initialized")
 
 	if reflect.TypeOf(fn).Kind() != reflect.Func {
-		panicErr(fmt.Errorf("the template [%s] func must be a callable function", name))
+		panicf("the template func [%s] type must be a function", name)
 	}
 
 	if r.FuncMap == nil {
 		r.FuncMap = make(template.FuncMap)
 	}
-
 	r.FuncMap[name] = fn
 }
 
@@ -132,7 +130,7 @@ func (r *Renderer) Initialize() error {
 		return nil
 	}
 
-	r.debugf("begin initialize the view renderer")
+	r.debugf("begin initialize the template renderer")
 	if len(r.ExtNames) == 0 {
 		r.ExtNames = []string{DefaultExt}
 	}
@@ -195,7 +193,7 @@ func (r *Renderer) Initialize() error {
  * load template files, strings
  *************************************************************/
 
-// LoadByGlob load templates by glob pattern.
+// LoadByGlob load templates by glob pattern. will panic on error
 //
 // Usage:
 //
@@ -203,9 +201,7 @@ func (r *Renderer) Initialize() error {
 //	r.LoadByGlob("views/*.tpl") // add ext limit
 //	r.LoadByGlob("views/**/*")
 func (r *Renderer) LoadByGlob(pattern string, baseDirs ...string) {
-	if !r.initialized {
-		panicErr(fmt.Errorf("please call Initialize(), before load templates"))
-	}
+	r.requireInit("must call Initialize() before load templates")
 
 	paths, err := filepath.Glob(pattern)
 	panicErr(err)
@@ -238,9 +234,7 @@ func (r *Renderer) LoadByGlob(pattern string, baseDirs ...string) {
 //
 //	r.LoadFiles("path/file1.tpl", "path/file2.tpl")
 func (r *Renderer) LoadFiles(files ...string) {
-	if !r.initialized {
-		panicErr(errors.New("please call Initialize(), before load templates"))
-	}
+	r.requireInit("must call Initialize() before load templates")
 
 	for _, file := range files {
 		ext := filepath.Ext(file)
@@ -251,18 +245,19 @@ func (r *Renderer) LoadFiles(files ...string) {
 	}
 }
 
-// LoadString load named template string.
+// LoadString load named template string. will panic on error
+//
 // Usage:
 //
 //	r.LoadString("my-page", "welcome {{.}}")
 //	// now, you can use "my-page" as an template name
-//	r.Partial(w, "my-page", "tom") // welcome tom
-func (r *Renderer) LoadString(tplName string, tplString string) {
-	r.ensureTemplates()
-	r.debugf("load named template string, name is: %s", tplName)
+//	r.Partial(w, "my-page", "tom") // Result: welcome tom
+func (r *Renderer) LoadString(tplName string, tplText string) {
+	r.ensureRoot()
+	r.debugf("load named template contents, name is: %s", tplName)
 
-	// Create new template in the templates
-	template.Must(r.newTemplate(r.cleanExt(tplName)).Parse(tplString))
+	// Create new template in the root, will inherit delimiters and add func map
+	template.Must(r.root.New(r.cleanExt(tplName)).Parse(tplText))
 }
 
 // LoadStrings load multi named template strings
@@ -276,9 +271,14 @@ func (r *Renderer) LoadStrings(sMap map[string]string) {
  * internal helper methods
  *************************************************************/
 
+func (r *Renderer) ensureRoot() {
+	if r.root == nil {
+		r.root = template.New("ROOT")
+	}
+}
+
 func (r *Renderer) compileTemplates() error {
-	// create root template engine
-	r.ensureTemplates()
+	r.ensureRoot()
 
 	for _, tplDir := range r.tplDirs {
 		if err := r.compileInDir(tplDir); err != nil {
@@ -289,7 +289,7 @@ func (r *Renderer) compileTemplates() error {
 }
 
 func (r *Renderer) compileInDir(dir string) error {
-	r.debugf("will compile templates from the views dir: %s", dir)
+	r.debugf("will compile templates in the views dir: %s", dir)
 
 	// Walk the supplied directory and compile any files that match our extension list.
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -314,7 +314,7 @@ func (r *Renderer) compileInDir(dir string) error {
 		// It is valid ext
 		if _, has := r.extMap[ext]; has {
 			name := rel[0 : len(rel)-len(ext)]
-			// create new template in the templates
+			// create new template in the root
 			r.loadTemplateFile(name, path)
 		}
 
@@ -322,40 +322,26 @@ func (r *Renderer) compileInDir(dir string) error {
 	})
 }
 
-func (r *Renderer) ensureTemplates() {
-	if r.templates == nil {
-		r.templates = template.New("ROOT")
-	}
-}
+func (r *Renderer) loadTemplateFile(tplName, filePath string) {
+	bs, err := os.ReadFile(filePath)
+	panicErr(err)
 
-func (r *Renderer) newTemplate(name string) *template.Template {
-	// Create new template in the templates
-	// will inherit delimiters and add func map
-	return r.templates.New(name)
-}
+	r.fileMap[tplName] = filePath
+	r.debugf("load template file: %s, template name: %s", filePath, tplName)
 
-func (r *Renderer) loadTemplateFile(tplName, file string) {
-	bs, err := os.ReadFile(file)
-	if err != nil {
-		panicErr(err)
-	}
-
-	r.fileMap[tplName] = file
-	r.debugf("load template file: %s, template name is: %s", file, tplName)
-
-	// Create new template in the templates
-	template.Must(r.newTemplate(tplName).Parse(string(bs)))
+	// Create new template in the root, will inherit delimiters and add func map
+	template.Must(r.root.New(tplName).Parse(string(bs)))
 }
 
 // name the template name
 func (r *Renderer) addLayoutFuncs(layout, name string, data any) {
 	tpl := r.Template(layout)
 	if tpl == nil {
-		panicErr(fmt.Errorf("the layout template: %s is not found, want render: %s", layout, name))
+		panicf("the layout template: %s is not found, want render: %s", layout, name)
 	}
 
 	// includeHandler := func(tplName string) (template.HTML, error) {
-	// 	if r.templates.Lookup(tplName) != nil {
+	// 	if r.root.Lookup(tplName) != nil {
 	// 		str, err := r.executeTemplate(tplName, data)
 	// 		// Return safe HTML here since we are rendering our own template.
 	// 		return template.HTML(str), err
@@ -382,9 +368,9 @@ func (r *Renderer) addLayoutFuncs(layout, name string, data any) {
  * Helper methods
  *************************************************************/
 
-// LoadedTemplates returns loaded template instances, including ROOT itself.
-func (r *Renderer) LoadedTemplates() []*template.Template {
-	return r.templates.Templates()
+// Templates returns loaded template instances, including ROOT itself.
+func (r *Renderer) Templates() []*template.Template {
+	return r.root.Templates()
 }
 
 // TemplateFiles returns loaded template files
@@ -392,29 +378,87 @@ func (r *Renderer) TemplateFiles() map[string]string {
 	return r.fileMap
 }
 
+var nameRpl = strings.NewReplacer(":", ":\n", ",", "\n")
+
 // TemplateNames returns loaded template names
-func (r *Renderer) TemplateNames(format ...bool) string {
-	str := r.templates.DefinedTemplates()
-	if len(format) != 1 || format[0] == false {
+func (r *Renderer) TemplateNames(formatted ...bool) string {
+	str := r.root.DefinedTemplates()
+	if len(formatted) != 1 || formatted[0] == false {
 		return str
 	}
-
-	str = strings.TrimLeft(str, "; ")
-	return strings.NewReplacer(":", ":\n", ",", "\n").Replace(str)
+	return nameRpl.Replace(strings.TrimLeft(str, "; "))
 }
 
-// Templates returns root template instance
-func (r *Renderer) Templates() *template.Template {
-	return r.templates
-}
+// Root returns root template instance
+func (r *Renderer) Root() *template.Template { return r.root }
 
 // Template get template instance by name
 func (r *Renderer) Template(name string) *template.Template {
-	return r.templates.Lookup(r.cleanExt(name))
+	return r.root.Lookup(r.cleanExt(name))
 }
 
 // IsValidExt check is valid ext name
 func (r *Renderer) IsValidExt(ext string) bool {
 	_, ok := r.extMap[ext]
 	return ok
+}
+
+// CleanExt will clean file ext.
+//
+// eg:
+//
+//	"some.tpl" -> "some"
+//	"path/some.tpl" -> "path/some"
+func (r *Renderer) cleanExt(name string) string {
+	if len(r.ExtNames) == 0 {
+		return name
+	}
+
+	// has ext
+	if pos := strings.LastIndexByte(name, '.'); pos > 0 {
+		ext := name[pos:]
+		if r.IsValidExt(ext) {
+			return name[0:pos]
+		}
+	}
+
+	return name
+}
+
+func (r *Renderer) getLayoutName(settings []string) string {
+	var layout string
+
+	disableLayout := r.DisableLayout
+	if len(settings) > 0 {
+		layout = strings.TrimSpace(settings[0])
+		if layout == "" {
+			disableLayout = true
+		}
+	} else {
+		layout = r.Layout
+	}
+
+	// Apply layout
+	if !disableLayout && layout != "" {
+		return layout
+	}
+	return ""
+}
+
+func (r *Renderer) requireInit(format string, args ...any) {
+	if !r.initialized {
+		panicf(format, args...)
+	}
+}
+
+func (r *Renderer) cannotInit(format string, args ...any) {
+	if r.initialized {
+		panicf(format, args...)
+	}
+}
+
+func (r *Renderer) debugf(format string, args ...any) {
+	if r.Debug {
+		fmt.Printf("easytpl: [DEBUG] "+format+"\n", args...)
+	}
 }

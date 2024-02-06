@@ -7,7 +7,7 @@ import (
 )
 
 /*************************************************************
- * render templates
+ * render root
  *************************************************************/
 
 // Render a template name/file and write to the Writer.
@@ -88,7 +88,7 @@ func (r *Renderer) executeByName(name string, v any) (string, error) {
 	name = r.cleanExt(name)
 
 	// Find template instance by name
-	tpl := r.templates.Lookup(name)
+	tpl := r.root.Lookup(name)
 	if tpl == nil {
 		return "", fmt.Errorf("easytpl: the template [%s] is not found", name)
 	}

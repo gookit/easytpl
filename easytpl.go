@@ -30,14 +30,10 @@ type TplDelims struct {
 var std = NewRenderer()
 
 // Revert the default instance
-func Revert() {
-	std = NewRenderer()
-}
+func Revert() { std = NewRenderer() }
 
 // Default get default instance
-func Default() *Renderer {
-	return std
-}
+func Default() *Renderer { return std }
 
 // AddFunc add template func
 func AddFunc(name string, fn any) { std.AddFunc(name, fn) }
@@ -57,13 +53,9 @@ func LoadFiles(files ...string) { std.LoadFiles(files...) }
 // LoadByGlob load templates by glob pattern.
 func LoadByGlob(pattern string, baseDirs ...string) { std.LoadByGlob(pattern, baseDirs...) }
 
-// Initialize the default instance
-func Initialize(fns ...func(r *Renderer)) {
-	// Apply config func
-	for _, fn := range fns {
-		fn(std)
-	}
-	std.MustInit()
+// Initialize the default instance with config func
+func Initialize(fns ...ConfigFn) {
+	std.WithConfig(fns...).MustInit()
 }
 
 /*************************************************************
@@ -75,17 +67,17 @@ func Render(w io.Writer, tplName string, v any, layouts ...string) error {
 	return std.Render(w, tplName, v, layouts...)
 }
 
-// Partial is alias of the Execute()
-func Partial(w io.Writer, tplName string, v any) error {
-	return std.Execute(w, tplName, v)
-}
-
 // Execute render partial, will not render layout file
 func Execute(w io.Writer, tplName string, v any) error {
 	return std.Execute(w, tplName, v)
 }
 
+// Partial is alias of the Execute()
+func Partial(w io.Writer, tplName string, v any) error {
+	return std.Execute(w, tplName, v)
+}
+
 // String render a template string
-func String(w io.Writer, tplString string, v any) error {
-	return std.String(w, tplString, v)
+func String(w io.Writer, tplStr string, v any) error {
+	return std.String(w, tplStr, v)
 }

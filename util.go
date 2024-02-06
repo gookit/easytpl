@@ -43,51 +43,13 @@ var globalFuncMap = template.FuncMap{
 	},
 }
 
-// CleanExt will clean file ext.
-// eg
-//
-//	"some.tpl" -> "some"
-//	"path/some.tpl" -> "path/some"
-func (r *Renderer) cleanExt(name string) string {
-	if len(r.ExtNames) == 0 {
-		return name
+func panicf(format string, args ...any) {
+	if len(args) > 0 {
+		panic("easyTpl: [ERROR] " + fmt.Sprintf(format, args...))
 	}
 
-	// has ext
-	if pos := strings.LastIndexByte(name, '.'); pos > 0 {
-		ext := name[pos:]
-		if r.IsValidExt(ext) {
-			return name[0:pos]
-		}
-	}
-
-	return name
-}
-
-func (r *Renderer) getLayoutName(settings []string) string {
-	var layout string
-
-	disableLayout := r.DisableLayout
-	if len(settings) > 0 {
-		layout = strings.TrimSpace(settings[0])
-		if layout == "" {
-			disableLayout = true
-		}
-	} else {
-		layout = r.Layout
-	}
-
-	// Apply layout
-	if !disableLayout && layout != "" {
-		return layout
-	}
-	return ""
-}
-
-func (r *Renderer) debugf(format string, args ...any) {
-	if r.Debug {
-		fmt.Printf("easytpl: [DEBUG] "+format+"\n", args...)
-	}
+	// only error message
+	panic("easyTpl: [ERROR] " + format)
 }
 
 func panicErr(err error) {
