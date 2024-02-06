@@ -11,7 +11,7 @@ var v *easytpl.Renderer
 
 // go run ./_examples/demo.go
 func main() {
-	// equals to call: view.NewRenderer() + r.MustInitialize()
+	// equals to call: view.NewRenderer() + r.MustInit()
 	v = easytpl.NewInitialized(func(r *easytpl.Renderer) {
 		// setting default layout
 		r.Layout = "layout" // equals to "layout.tpl"

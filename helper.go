@@ -84,7 +84,7 @@ func (r *Renderer) getLayoutName(settings []string) string {
 	return ""
 }
 
-func (r *Renderer) debugf(format string, args ...interface{}) {
+func (r *Renderer) debugf(format string, args ...any) {
 	if r.Debug {
 		fmt.Printf("easytpl: [DEBUG] "+format+"\n", args...)
 	}
@@ -92,7 +92,7 @@ func (r *Renderer) debugf(format string, args ...interface{}) {
 
 func panicErr(err error) {
 	if err != nil {
-		panic("easytpl: [ERROR] " + err.Error())
+		panic("easyTpl: [ERROR] " + err.Error())
 	}
 }
 
@@ -108,7 +108,7 @@ type bufferPool struct {
 // newBufferPool constructs a new bufferPool.
 func newBufferPool() *bufferPool {
 	return &bufferPool{&sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			return &bytes.Buffer{}
 		},
 	}}

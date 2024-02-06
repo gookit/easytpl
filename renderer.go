@@ -1,12 +1,15 @@
 package easytpl
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
-	"io"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
+
+	"github.com/gookit/goutil/basefn"
 )
 
 // Renderer definition
@@ -25,13 +28,16 @@ type Renderer struct {
 	templates *template.Template
 	// mark renderer is initialized
 	initialized bool
+	// from ViewsDir, split by comma
+	tplDirs []string
+
 	// Debug setting
 	Debug bool
 	// Layout template name
 	Layout string
 	// Delims define for template
 	Delims TplDelims
-	// ViewsDir the default views directory
+	// ViewsDir the default views directory, multi dirs use "," split
 	ViewsDir string
 	// ExtNames allowed template extensions. eg {"tpl", "html"}
 	ExtNames []string
@@ -44,8 +50,11 @@ type Renderer struct {
 	AutoSearchFile bool
 }
 
+// ConfigFn for renderer
+type ConfigFn func(r *Renderer)
+
 // NewRenderer create a new view renderer
-func NewRenderer(fns ...func(r *Renderer)) *Renderer {
+func NewRenderer(fns ...ConfigFn) *Renderer {
 	r := &Renderer{
 		Delims:   TplDelims{"{{", "}}"},
 		FuncMap:  make(template.FuncMap),
@@ -55,16 +64,20 @@ func NewRenderer(fns ...func(r *Renderer)) *Renderer {
 	}
 
 	// Apply config func
-	if len(fns) == 1 {
-		fns[0](r)
-	}
-	return r
+	return r.WithConfig(fns...)
 }
 
-// NewInitialized create a new and initialized view renderer
-func NewInitialized(fns ...func(r *Renderer)) *Renderer {
+// NewInitialized create a new and initialized view renderer.
+func NewInitialized(fns ...ConfigFn) *Renderer {
 	r := NewRenderer(fns...)
-	r.MustInitialize()
+	return r.MustInit()
+}
+
+// WithConfig apply config func
+func (r *Renderer) WithConfig(fns ...ConfigFn) *Renderer {
+	for _, fn := range fns {
+		fn(r)
+	}
 	return r
 }
 
@@ -73,12 +86,7 @@ func NewInitialized(fns ...func(r *Renderer)) *Renderer {
  *************************************************************/
 
 // AddFunc add template func
-func AddFunc(name string, fn interface{}) {
-	std.AddFunc(name, fn)
-}
-
-// AddFunc add template func
-func (r *Renderer) AddFunc(name string, fn interface{}) {
+func (r *Renderer) AddFunc(name string, fn any) {
 	if r.initialized {
 		panicErr(fmt.Errorf("cannot add template func after initialized"))
 	}
@@ -95,11 +103,6 @@ func (r *Renderer) AddFunc(name string, fn interface{}) {
 }
 
 // AddFuncMap add template func map
-func AddFuncMap(fm template.FuncMap) {
-	std.AddFuncMap(fm)
-}
-
-// AddFuncMap add template func map
 func (r *Renderer) AddFuncMap(fm template.FuncMap) {
 	if r.FuncMap == nil {
 		r.FuncMap = make(template.FuncMap)
@@ -110,17 +113,19 @@ func (r *Renderer) AddFuncMap(fm template.FuncMap) {
 	}
 }
 
-// Initialize the default instance
-func Initialize(fns ...func(r *Renderer)) {
-	// Apply config func
-	if len(fns) == 1 {
-		fns[0](std)
-	}
+// MustInitialize compile templates and report error
+//
+// Deprecated: please use MustInit, will remove this method in the future
+func (r *Renderer) MustInitialize() { r.MustInit() }
 
-	std.MustInitialize()
+// MustInit compile templates, will panic on error
+func (r *Renderer) MustInit() *Renderer {
+	basefn.MustOK(r.Initialize())
+	return r
 }
 
 // Initialize templates in the viewsDir, add do some prepare works.
+//
 // Notice: must call it on after create Renderer
 func (r *Renderer) Initialize() error {
 	if r.initialized {
@@ -132,6 +137,7 @@ func (r *Renderer) Initialize() error {
 		r.ExtNames = []string{DefaultExt}
 	}
 
+	r.tplDirs = strings.Split(r.ViewsDir, ",")
 	r.extMap = make(map[string]uint8, len(r.ExtNames))
 	for _, ext := range r.ExtNames {
 		if ext[0] != '.' {
@@ -143,9 +149,9 @@ func (r *Renderer) Initialize() error {
 
 	// add template func
 	r.AddFuncMap(globalFuncMap)
-	r.AddFunc("include", func(tplName string, data ...interface{}) (template.HTML, error) {
+	r.AddFunc("include", func(tplName string, data ...any) (template.HTML, error) {
 		if tpl := r.Template(tplName); tpl != nil {
-			var v interface{}
+			var v any
 			if len(data) == 1 {
 				v = data[0]
 			}
@@ -156,9 +162,9 @@ func (r *Renderer) Initialize() error {
 
 		return "", nil
 	})
-	r.AddFunc("extends", func(tplName string, data ...interface{}) (template.HTML, error) {
+	r.AddFunc("extends", func(tplName string, data ...any) (template.HTML, error) {
 		if tpl := r.Template(tplName); tpl != nil {
-			var v interface{}
+			var v any
 			if len(data) == 1 {
 				v = data[0]
 			}
@@ -185,21 +191,12 @@ func (r *Renderer) Initialize() error {
 	return nil
 }
 
-// MustInitialize compile templates and report error
-func (r *Renderer) MustInitialize() {
-	panicErr(r.Initialize())
-}
-
 /*************************************************************
  * load template files, strings
  *************************************************************/
 
 // LoadByGlob load templates by glob pattern.
-func LoadByGlob(pattern string, baseDirs ...string) {
-	std.LoadByGlob(pattern, baseDirs...)
-}
-
-// LoadByGlob load templates by glob pattern.
+//
 // Usage:
 //
 //	r.LoadByGlob("views/*")
@@ -236,17 +233,13 @@ func (r *Renderer) LoadByGlob(pattern string, baseDirs ...string) {
 }
 
 // LoadFiles load custom template files.
-func LoadFiles(files ...string) {
-	std.LoadFiles(files...)
-}
-
-// LoadFiles load custom template files.
+//
 // Usage:
 //
 //	r.LoadFiles("path/file1.tpl", "path/file2.tpl")
 func (r *Renderer) LoadFiles(files ...string) {
 	if !r.initialized {
-		panicErr(fmt.Errorf("please call Initialize(), before load templates"))
+		panicErr(errors.New("please call Initialize(), before load templates"))
 	}
 
 	for _, file := range files {
@@ -256,11 +249,6 @@ func (r *Renderer) LoadFiles(files ...string) {
 			r.loadTemplateFile(name, file)
 		}
 	}
-}
-
-// LoadString load named template string.
-func LoadString(tplName string, tplString string) {
-	std.LoadString(tplName, tplString)
 }
 
 // LoadString load named template string.
@@ -278,11 +266,6 @@ func (r *Renderer) LoadString(tplName string, tplString string) {
 }
 
 // LoadStrings load multi named template strings
-func LoadStrings(sMap map[string]string) {
-	std.LoadStrings(sMap)
-}
-
-// LoadStrings load multi named template strings
 func (r *Renderer) LoadStrings(sMap map[string]string) {
 	for name, tplStr := range sMap {
 		r.LoadString(name, tplStr)
@@ -290,81 +273,113 @@ func (r *Renderer) LoadStrings(sMap map[string]string) {
 }
 
 /*************************************************************
- * render templates
+ * internal helper methods
  *************************************************************/
 
-// Render a template name/file and write to the Writer.
-func Render(w io.Writer, tplName string, v interface{}, layouts ...string) error {
-	return std.Render(w, tplName, v, layouts...)
+func (r *Renderer) compileTemplates() error {
+	// create root template engine
+	r.ensureTemplates()
+
+	for _, tplDir := range r.tplDirs {
+		if err := r.compileInDir(tplDir); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-// Render a template name/file and write to the Writer.
-//
-// Usage:
-//
-//			renderer := easytpl.NewRenderer()
-//	 	// ... ...
-//			// will apply global layout setting
-//			renderer.Render(http.ResponseWriter, "user/login", data)
-//			// apply custom layout file
-//			renderer.Render(http.ResponseWriter, "user/login", data, "custom-layout")
-//			// will disable apply layout render
-//			renderer.Render(http.ResponseWriter, "user/login", data, "")
-func (r *Renderer) Render(w io.Writer, tplName string, v interface{}, layouts ...string) error {
-	// Apply layout render
-	if layout := r.getLayoutName(layouts); layout != "" {
-		r.addLayoutFuncs(layout, tplName, v)
-		tplName = layout
+func (r *Renderer) compileInDir(dir string) error {
+	r.debugf("will compile templates from the views dir: %s", dir)
+
+	// Walk the supplied directory and compile any files that match our extension list.
+	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		// Skip dir
+		if info == nil || info.IsDir() {
+			return nil
+		}
+
+		// Path is full path, rel is relative path
+		// e.g. path: "testdata/admin/footer.tpl" -> rel: "admin/footer.tpl"
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+
+		// Skip no ext
+		if strings.IndexByte(rel, '.') == -1 {
+			return nil
+		}
+
+		ext := filepath.Ext(rel)
+		// It is valid ext
+		if _, has := r.extMap[ext]; has {
+			name := rel[0 : len(rel)-len(ext)]
+			// create new template in the templates
+			r.loadTemplateFile(name, path)
+		}
+
+		return err
+	})
+}
+
+func (r *Renderer) ensureTemplates() {
+	if r.templates == nil {
+		r.templates = template.New("ROOT")
+	}
+}
+
+func (r *Renderer) newTemplate(name string) *template.Template {
+	// Create new template in the templates
+	// will inherit delimiters and add func map
+	return r.templates.New(name)
+}
+
+func (r *Renderer) loadTemplateFile(tplName, file string) {
+	bs, err := os.ReadFile(file)
+	if err != nil {
+		panicErr(err)
 	}
 
-	return r.Execute(w, tplName, v)
+	r.fileMap[tplName] = file
+	r.debugf("load template file: %s, template name is: %s", file, tplName)
+
+	// Create new template in the templates
+	template.Must(r.newTemplate(tplName).Parse(string(bs)))
 }
 
-// Partial is alias of the Execute()
-func Partial(w io.Writer, tplName string, v interface{}) error {
-	return std.Execute(w, tplName, v)
-}
-
-// Partial is alias of the Execute()
-func (r *Renderer) Partial(w io.Writer, tplName string, v interface{}) error {
-	return r.Execute(w, tplName, v)
-}
-
-// Execute render partial, will not render layout file
-func Execute(w io.Writer, tplName string, v interface{}) error {
-	return std.Execute(w, tplName, v)
-}
-
-// Execute render partial, will not render layout file
-func (r *Renderer) Execute(w io.Writer, tplName string, v interface{}) error {
-	if !r.initialized {
-		panicErr(fmt.Errorf("please call Initialize() before execute render template"))
+// name the template name
+func (r *Renderer) addLayoutFuncs(layout, name string, data any) {
+	tpl := r.Template(layout)
+	if tpl == nil {
+		panicErr(fmt.Errorf("the layout template: %s is not found, want render: %s", layout, name))
 	}
 
-	// Render template content
-	str, err := r.executeByName(tplName, v)
-	if err == nil {
-		_, err = w.Write([]byte(str))
+	// includeHandler := func(tplName string) (template.HTML, error) {
+	// 	if r.templates.Lookup(tplName) != nil {
+	// 		str, err := r.executeTemplate(tplName, data)
+	// 		// Return safe HTML here since we are rendering our own template.
+	// 		return template.HTML(str), err
+	// 	}
+	//
+	// 	return "", nil
+	// }
+
+	r.debugf("add funcs[yield, partial] to layout template: %s, target template: %s", layout, name)
+	funcMap := template.FuncMap{
+		"yield": func() (template.HTML, error) {
+			str, err := r.executeByName(name, data)
+			return template.HTML(str), err
+		},
+		// Will add data to included template
+		// "include": includeHandler,
+		// "partial": includeHandler,
 	}
 
-	return err
-}
-
-// String render a template string
-func String(w io.Writer, tplString string, v interface{}) error {
-	return std.String(w, tplString, v)
-}
-
-// String render a template string
-func (r *Renderer) String(w io.Writer, tplString string, v interface{}) error {
-	t := template.New("").Delims(r.Delims.Left, r.Delims.Right).Funcs(r.FuncMap)
-
-	template.Must(t.Parse(tplString))
-	return t.Execute(w, v)
+	tpl.Funcs(funcMap)
 }
 
 /*************************************************************
- * Getter methods
+ * Helper methods
  *************************************************************/
 
 // LoadedTemplates returns loaded template instances, including ROOT itself.

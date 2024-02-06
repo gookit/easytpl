@@ -17,11 +17,3 @@ indent_style = tab
 [*.md]
 trim_trailing_whitespace = false
 
-[*.css]
-indent_size = 2
-
-[*.js]
-indent_size = 2
-
-[*.tag]
-indent_size = 2

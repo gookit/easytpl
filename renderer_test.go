@@ -11,7 +11,7 @@ import (
 )
 
 func Example() {
-	// equals to call: easytpl.NewRenderer() + r.MustInitialize()
+	// equals to call: easytpl.NewRenderer() + r.MustInit()
 	r := easytpl.NewInitialized(func(r *easytpl.Renderer) {
 		// setting default layout
 		r.Layout = "layout" // equals to "layout.tpl"
@@ -58,7 +58,7 @@ func TestRenderer_AddFunc(t *testing.T) {
 	art.Panics(func() {
 		r.AddFunc("test2", "invalid")
 	})
-	r.MustInitialize()
+	r.MustInit()
 
 	art.Panics(func() {
 		r.AddFunc("test3", func() {})
@@ -184,7 +184,7 @@ func TestRenderer_LoadFiles(t *testing.T) {
 func TestRenderer_String(t *testing.T) {
 	art := assert.New(t)
 	r := easytpl.NewRenderer()
-	r.MustInitialize()
+	r.MustInit()
 
 	bf := new(bytes.Buffer)
 

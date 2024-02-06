@@ -12,7 +12,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        go_version: [1.18, 1.19, '1.20']
+        go_version: [1.21, 1.19, '1.20']
         os: [ubuntu-latest]
 
     steps:
@@ -31,7 +31,7 @@ jobs:
       run: go test -coverprofile="profile.cov" ./...
 
     - name: Send coverage
-      uses: shogo82148/actions-goveralls@v1.8.0
+      uses: shogo82148/actions-goveralls@v1.9.0
       if: ${{ matrix.os == 'ubuntu-latest' }}
       with:
           path-to-profile: profile.cov
@@ -44,6 +44,6 @@ jobs:
       needs: test
       runs-on: ubuntu-latest
       steps:
-          - uses: shogo82148/actions-goveralls@v1.8.0
+          - uses: shogo82148/actions-goveralls@v1.9.0
             with:
                 parallel-finished: true
