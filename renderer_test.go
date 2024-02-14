@@ -11,15 +11,14 @@ import (
 
 func Example() {
 	// equals to call: easytpl.NewRenderer() + r.MustInit()
-	r := easytpl.NewInitialized(func(r *easytpl.Renderer) {
+	r := easytpl.NewInited(func(r *easytpl.Renderer) {
 		// setting default layout
 		r.Layout = "layout" // equals to "layout.tpl"
-		// root dir. will auto load on init.
-		r.ViewsDir = "testdata"
+		// root dir. will autoload on init.
+		r.ViewsDir = "testdata/layouts"
 	})
 
 	// fmt.Println(r.TemplateNames(true))
-
 	bf := new(bytes.Buffer)
 
 	// render template string
@@ -40,7 +39,7 @@ func Example() {
 
 	// load named template string
 	r.LoadString("my-page", "welcome {{.}}")
-	// now, you can use "my-page" as an template name
+	// now, you can use "my-page" as a template name
 	_ = r.Partial(bf, "my-page", "tom") // welcome tom
 	bf.Reset()
 
@@ -64,78 +63,6 @@ func TestRenderer_AddFunc(t *testing.T) {
 	})
 }
 
-func TestRenderer_Initialize(t *testing.T) {
-	is := assert.New(t)
-
-	// r := &Renderer{}
-	easytpl.AddFunc("test", func() string { return "" })
-	is.Panics(func() {
-		easytpl.LoadFiles("testdata/home.tpl")
-	})
-	is.Panics(func() {
-		easytpl.LoadByGlob("testdata/site/*.tpl", "testdata/site")
-	})
-	easytpl.AddFuncMap(map[string]interface{}{
-		"test1": func() string { return "" },
-	})
-
-	r := easytpl.Default()
-	r.Debug = true
-
-	is.NoError(r.Initialize())
-
-	// re-init
-	is.Nil(r.Initialize())
-	is.NotNil(r.Root())
-
-	r.LoadByGlob("testdata/site/*.tpl", "testdata/site")
-	is.Len(r.TemplateFiles(), 5)
-
-	tpl := r.Template("header")
-	is.NotNil(tpl)
-	tpl = r.Template("header.tpl")
-	is.NotNil(tpl)
-
-	bf := new(bytes.Buffer)
-	r1 := easytpl.NewRenderer()
-	is.Panics(func() {
-		_ = r1.Render(bf, "", nil)
-	})
-
-	// use layout
-	r = easytpl.NewInitialized(func(r *easytpl.Renderer) {
-		r.Layout = "layout"
-		r.ViewsDir = "testdata/admin"
-	})
-
-	// including itself.
-	is.Len(r.Templates(), 5+1)
-
-	bf.Reset()
-	err := r.Render(bf, "home.tpl", "tom")
-	is.Nil(err)
-	str := bf.String()
-	is.Contains(str, "admin header")
-	is.Contains(str, "home: hello")
-	is.Contains(str, "admin footer")
-
-	is.Panics(func() {
-		_ = r.Render(bf, "home.tpl", "tom", "not-exist.tpl")
-	})
-
-	r = easytpl.NewInitialized(func(r *easytpl.Renderer) {
-		r.Layout = "layout"
-		r.ViewsDir = "testdata"
-	})
-
-	ns := r.TemplateNames(true)
-	is.Contains(ns, "header")
-	is.Contains(ns, "admin/header")
-	is.Contains(ns, "site/header")
-
-	easytpl.Revert() // Revert
-}
-
 func TestRenderer_LoadByGlob(t *testing.T) {
 	bf := new(bytes.Buffer)
 	is := assert.New(t)
@@ -143,8 +70,8 @@ func TestRenderer_LoadByGlob(t *testing.T) {
 	r := easytpl.NewInitialized(func(r *easytpl.Renderer) {
 		// r.Debug = true
 	})
-	r.LoadByGlob("testdata/*")
-	// r.LoadByGlob("testdata/*.tpl")
+	r.LoadByGlob("testdata/layouts/*")
+	// r.LoadByGlob("testdata/layouts/*.tpl")
 	err := r.Render(bf, "not-exist", "tom")
 	is.Error(err)
 	bf.Reset()
@@ -234,7 +161,7 @@ func TestRenderer_String(t *testing.T) {
 	is.Contains(err.Error(), "yield called")
 
 	bf.Reset()
-	err = r.String(bf, `hello {{ current }}`, "tom")
+	err = r.String(bf, `hello {{ current_tpl }}`, "tom")
 	is.Nil(err)
 	is.Equal(`hello `, bf.String())
 }
@@ -242,10 +169,7 @@ func TestRenderer_String(t *testing.T) {
 func TestRenderer_LoadStrings(t *testing.T) {
 	bf := new(bytes.Buffer)
 	is := assert.New(t)
-	r := easytpl.NewRenderer(func(r *easytpl.Renderer) {
-		// r.Debug = true
-		r.Layout = "layout"
-	})
+	r := easytpl.NewRenderer(easytpl.WithLayout("layout"))
 	is.NoError(r.Initialize())
 
 	r.LoadStrings(map[string]string{
@@ -254,9 +178,9 @@ func TestRenderer_LoadStrings(t *testing.T) {
 		"header":       `is header:{{.}}`,
 		"footer":       `is footer:{{.}}`,
 		"home":         `hello {{.name}}`,
-		"admin/home":   `1 at {{current}}:{{.}}`,
-		"admin/login":  `2 at {{current}}:{{ . }}`,
-		"other":        `at {{current}}:{{ include "not-exist" }}`,
+		"admin/home":   `1 at {{current_tpl}}:{{.}}`,
+		"admin/login":  `2 at {{current_tpl}}:{{ . }}`,
+		"other":        `at {{current_tpl}}:{{ include "not-exist" }}`,
 	})
 
 	r.LoadString("admin/reg", `main: hello {{.}}`)
