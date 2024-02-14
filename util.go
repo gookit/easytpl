@@ -10,37 +10,20 @@ import (
 
 // match '{{ extend "parent.tpl" }}'
 // var extendsRegex = regexp.MustCompile(`{{ *?extends +?"(.+?)" *?}}`)
+
 var globalFuncMap = template.FuncMap{
 	// don't escape content
-	"raw": func(s string) template.HTML {
-		return template.HTML(s)
-	},
+	"raw":   func(s string) template.HTML { return template.HTML(s) },
 	"trim":  strings.TrimSpace,
 	"join":  strings.Join,
 	"lower": strings.ToLower,
 	"upper": strings.ToUpper,
-	// uppercase first char
-	"ucFirst": func(s string) string {
-		if len(s) != 0 {
-			f := s[0]
-			// is lower
-			if f >= 'a' && f <= 'z' {
-				return strings.ToUpper(string(f)) + s[1:]
-			}
-		}
-
-		return s
-	},
 	"yield": func() (string, error) {
 		return "", fmt.Errorf("yield called with no layout defined")
 	},
-	// add a empty func for compile
-	"current": func() string {
-		return ""
-	},
-	"extends": func(name string) string {
-		return ""
-	},
+	// add an empty func for compile
+	"current_tpl": func() string { return "" },
+	"extends":     func(name string) string { return "" },
 }
 
 func panicf(format string, args ...any) {

@@ -29,8 +29,11 @@ type TplDelims struct {
 // create an default instance
 var std = NewRenderer()
 
-// Revert the default instance
-func Revert() { std = NewRenderer() }
+// Reset the default instance
+func Reset() { std = NewRenderer() }
+
+// Revert the default instance, alias of Reset()
+func Revert() { Reset() }
 
 // Default get default instance
 func Default() *Renderer { return std }
@@ -59,12 +62,41 @@ func Initialize(fns ...ConfigFn) {
 }
 
 /*************************************************************
+ * render config func
+ *************************************************************/
+
+// WithDebug set enable debug mode.
+func WithDebug(r *Renderer) { r.Debug = true }
+
+// WithLayout set the layout template name.
+func WithLayout(layoutName string) ConfigFn {
+	return func(r *Renderer) {
+		r.Layout = layoutName
+		r.DisableLayout = false
+	}
+}
+
+// DisableLayout disable the layout template.
+func DisableLayout(r *Renderer) {
+	r.Layout = ""
+	r.DisableLayout = true
+}
+
+// WithTplDirs set template dirs
+func WithTplDirs(dirs string) ConfigFn {
+	return func(r *Renderer) { r.ViewsDir = dirs }
+}
+
+// WithViewDirs set template dirs, alias of WithTplDirs()
+func WithViewDirs(dirs string) ConfigFn { return WithTplDirs(dirs) }
+
+/*************************************************************
  * render templates
  *************************************************************/
 
-// Render a template name/file and write to the Writer.
-func Render(w io.Writer, tplName string, v any, layouts ...string) error {
-	return std.Render(w, tplName, v, layouts...)
+// Render a template name/file with layout, write result to the Writer.
+func Render(w io.Writer, tplName string, v any, layout ...string) error {
+	return std.Render(w, tplName, v, layout...)
 }
 
 // Execute render partial, will not render layout file

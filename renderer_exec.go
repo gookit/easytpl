@@ -24,11 +24,11 @@ import (
 //
 //	// will disable apply layout render
 //	renderer.Render(http.ResponseWriter, "user/login", data, "")
-func (r *Renderer) Render(w io.Writer, tplName string, v any, layouts ...string) error {
+func (r *Renderer) Render(w io.Writer, tplName string, v any, layout ...string) error {
 	// Apply layout render
-	if layout := r.getLayoutName(layouts); layout != "" {
-		r.addLayoutFuncs(layout, tplName, v)
-		tplName = layout
+	if layoutName := r.getLayoutName(layout); layoutName != "" {
+		r.addLayoutFuncs(layoutName, tplName, v)
+		tplName = layoutName
 	}
 
 	return r.Execute(w, tplName, v)
@@ -41,7 +41,7 @@ func (r *Renderer) Partial(w io.Writer, tplName string, v any) error {
 
 // Execute render partial, will not render layout file
 func (r *Renderer) Execute(w io.Writer, tplName string, v any) error {
-	if !r.initialized {
+	if !r.init {
 		panicErr(fmt.Errorf("please call Initialize() before execute render template"))
 	}
 
@@ -54,31 +54,31 @@ func (r *Renderer) Execute(w io.Writer, tplName string, v any) error {
 }
 
 // String render a template string
-func (r *Renderer) String(w io.Writer, tplString string, v any) error {
+func (r *Renderer) String(w io.Writer, tplText string, v any) error {
+	// must create a new template instance
 	t := template.New("string-tpl").Delims(r.Delims.Left, r.Delims.Right).Funcs(r.FuncMap)
 
-	template.Must(t.Parse(tplString))
-	return t.Execute(w, v)
+	return template.Must(t.Parse(tplText)).Execute(w, v)
 }
 
 // execute data render by template instance
 func (r *Renderer) executeTemplate(tpl *template.Template, v any) (string, error) {
-	// Get a buffer from the pool to write to.
+	// get a buffer from the pool to write to.
 	buf := r.bufPool.get()
 	name := tpl.Name()
 
 	// Current template name
 	tpl.Funcs(template.FuncMap{
-		"current": func() string {
+		"current_tpl": func() string {
 			return name
 		},
 	})
 
-	r.debugf("render the template: %s, override set func: current", name)
+	r.debugf("render the template %q, override set func: current_tpl", name)
 	err := tpl.Execute(buf, v)
 	str := buf.String()
 
-	// Return buffer to pool
+	// release buffer to pool
 	r.bufPool.put(buf)
 	return str, err
 }

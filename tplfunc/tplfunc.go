@@ -30,6 +30,8 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/gookit/goutil/strutil"
 )
 
 // FuncMap returns the default FuncMap.
@@ -43,6 +45,8 @@ var stdFuncMap = map[string]any{
 	"trim":  strings.TrimSpace,
 	"upper": strings.ToUpper,
 	"lower": strings.ToLower,
+	// uppercase first char
+	"ucFirst": strutil.UpFirst,
 
 	// OS:
 	"env":       os.Getenv,

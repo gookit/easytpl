@@ -13,13 +13,12 @@ import (
 
 // Renderer definition
 type Renderer struct {
-	extMap map[string]uint8
-	// loaded files. {"tpl name": "file path"}
-	fileMap map[string]string
 	bufPool *bufferPool
+	// mark renderer is initialized
+	init bool
 	// root It is the root template instance.
 	//
-	// It is like a map, contains all parsed root
+	// It is like a map, contains all parsed templates.
 	//
 	// {
 	// 	"tpl name0": *template.Template,
@@ -27,24 +26,26 @@ type Renderer struct {
 	// 	... ...
 	// }
 	root *template.Template
-	// mark renderer is initialized
-	initialized bool
+	// supported template file extension names
+	extMap map[string]uint8
+	// loaded template files. {"tpl name": "file path"}
+	fileMap map[string]string
 	// from ViewsDir, split by comma
 	tplDirs []string
 
 	// Debug setting
 	Debug bool
-	// Layout template name
+	// Layout template name for default.
 	Layout string
 	// Delims define for template
 	Delims TplDelims
 	// ViewsDir the default views directory, multi dirs use "," split
 	ViewsDir string
-	// ExtNames allowed template extensions. eg {"tpl", "html"}
+	// ExtNames supported template extensions, without dot prefix. eg {"tpl", "html"}
 	ExtNames []string
 	// FuncMap func map for template
 	FuncMap template.FuncMap
-	// DisableLayout disable layout. default is False
+	// DisableLayout disable apply layout render. default is False
 	DisableLayout bool
 	// AutoSearchFile
 	// TODO: auto search template file, when not found on compiled templates. default is False
@@ -64,17 +65,20 @@ func NewRenderer(fns ...ConfigFn) *Renderer {
 		fileMap:  make(map[string]string),
 	}
 
-	// Apply config func
 	return r.WithConfig(fns...)
+}
+
+// NewInited create a new and initialized template renderer. alias of NewInitialized()
+func NewInited(fns ...ConfigFn) *Renderer {
+	return NewRenderer(fns...).MustInit()
 }
 
 // NewInitialized create a new and initialized view renderer.
 func NewInitialized(fns ...ConfigFn) *Renderer {
-	r := NewRenderer(fns...)
-	return r.MustInit()
+	return NewRenderer(fns...).MustInit()
 }
 
-// WithConfig apply config func
+// WithConfig apply config functions
 func (r *Renderer) WithConfig(fns ...ConfigFn) *Renderer {
 	for _, fn := range fns {
 		fn(r)
@@ -83,7 +87,7 @@ func (r *Renderer) WithConfig(fns ...ConfigFn) *Renderer {
 }
 
 /*************************************************************
- * prepare for view Renderer
+ * prepare for template Renderer
  *************************************************************/
 
 // AddFunc add template func
@@ -125,27 +129,33 @@ func (r *Renderer) MustInit() *Renderer {
 // Initialize templates in the viewsDir, add do some prepare works.
 //
 // Notice: must call it on after create Renderer
-func (r *Renderer) Initialize() error {
-	if r.initialized {
+func (r *Renderer) Initialize() error { return r.Init() }
+
+// Init Initialize templates in the viewsDir, add do some prepare works.
+//
+// Notice: must call it on after create Renderer
+func (r *Renderer) Init() error {
+	if r.init {
 		return nil
 	}
 
-	r.debugf("begin initialize the template renderer")
+	r.debugf("begin initialize the renderer: init fields, add funcs ...")
 	if len(r.ExtNames) == 0 {
 		r.ExtNames = []string{DefaultExt}
 	}
+	if len(r.ViewsDir) > 0 {
+		r.tplDirs = strings.Split(r.ViewsDir, ",")
+	}
 
-	r.tplDirs = strings.Split(r.ViewsDir, ",")
 	r.extMap = make(map[string]uint8, len(r.ExtNames))
 	for _, ext := range r.ExtNames {
 		if ext[0] != '.' {
 			ext = "." + ext
 		}
-
 		r.extMap[ext] = 0
 	}
 
-	// add template func
+	// add custom template func
 	r.AddFuncMap(globalFuncMap)
 	r.AddFunc("include", func(tplName string, data ...any) (template.HTML, error) {
 		if tpl := r.Template(tplName); tpl != nil {
@@ -175,6 +185,7 @@ func (r *Renderer) Initialize() error {
 		return "", nil
 	})
 
+	r.init = true
 	if r.fileMap == nil {
 		r.fileMap = make(map[string]string)
 	}
@@ -185,7 +196,6 @@ func (r *Renderer) Initialize() error {
 	}
 
 	r.debugf("renderer initialize is complete, added template func: %d", len(r.FuncMap))
-	r.initialized = true
 	return nil
 }
 
@@ -198,8 +208,9 @@ func (r *Renderer) Initialize() error {
 // Usage:
 //
 //	r.LoadByGlob("views/*")
+//	r.LoadByGlob("views/*", "views") // register template will remove prefix "views"
 //	r.LoadByGlob("views/*.tpl") // add ext limit
-//	r.LoadByGlob("views/**/*")
+//	r.LoadByGlob("views/**/*") // all sub-dir files
 func (r *Renderer) LoadByGlob(pattern string, baseDirs ...string) {
 	r.requireInit("must call Initialize() before load templates")
 
@@ -223,6 +234,7 @@ func (r *Renderer) LoadByGlob(pattern string, baseDirs ...string) {
 			panicErr(err)
 		}
 
+		// eg: relPath="path/to/some.tpl" -> name="some"
 		name := filepath.ToSlash(relPath[0 : len(relPath)-len(ext)])
 		r.loadTemplateFile(name, path)
 	}
@@ -250,7 +262,7 @@ func (r *Renderer) LoadFiles(files ...string) {
 // Usage:
 //
 //	r.LoadString("my-page", "welcome {{.}}")
-//	// now, you can use "my-page" as an template name
+//	// now, you can use "my-page" as a template name
 //	r.Partial(w, "my-page", "tom") // Result: welcome tom
 func (r *Renderer) LoadString(tplName string, tplText string) {
 	r.ensureRoot()
@@ -272,8 +284,9 @@ func (r *Renderer) LoadStrings(sMap map[string]string) {
  *************************************************************/
 
 func (r *Renderer) ensureRoot() {
+	r.requireInit("must call Initialize() before current operation")
 	if r.root == nil {
-		r.root = template.New("ROOT")
+		r.root = template.New("ROOT").Funcs(r.FuncMap)
 	}
 }
 
@@ -289,7 +302,7 @@ func (r *Renderer) compileTemplates() error {
 }
 
 func (r *Renderer) compileInDir(dir string) error {
-	r.debugf("will compile templates in the views dir: %s", dir)
+	r.debugf("will compile templates in the dir: %s", dir)
 
 	// Walk the supplied directory and compile any files that match our extension list.
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -305,19 +318,17 @@ func (r *Renderer) compileInDir(dir string) error {
 			return err
 		}
 
-		// Skip no ext
-		if strings.IndexByte(rel, '.') == -1 {
+		// skip no extension file
+		ext := filepath.Ext(rel)
+		if len(ext) == 0 {
 			return nil
 		}
 
-		ext := filepath.Ext(rel)
-		// It is valid ext
+		// load on is supported extension
 		if _, has := r.extMap[ext]; has {
 			name := rel[0 : len(rel)-len(ext)]
-			// create new template in the root
 			r.loadTemplateFile(name, path)
 		}
-
 		return err
 	})
 }
@@ -329,7 +340,7 @@ func (r *Renderer) loadTemplateFile(tplName, filePath string) {
 	r.fileMap[tplName] = filePath
 	r.debugf("load template file: %s, template name: %s", filePath, tplName)
 
-	// Create new template in the root, will inherit delimiters and add func map
+	// create new template in the root, will inherit delimiters and all func map
 	template.Must(r.root.New(tplName).Parse(string(bs)))
 }
 
@@ -337,7 +348,7 @@ func (r *Renderer) loadTemplateFile(tplName, filePath string) {
 func (r *Renderer) addLayoutFuncs(layout, name string, data any) {
 	tpl := r.Template(layout)
 	if tpl == nil {
-		panicf("the layout template: %s is not found, want render: %s", layout, name)
+		panicf("the layout template %q is not found, want render: %s", layout, name)
 	}
 
 	// includeHandler := func(tplName string) (template.HTML, error) {
@@ -348,10 +359,10 @@ func (r *Renderer) addLayoutFuncs(layout, name string, data any) {
 	// 	}
 	//
 	// 	return "", nil
-	// }
+	// 	}
 
 	r.debugf("add funcs[yield, partial] to layout template: %s, target template: %s", layout, name)
-	funcMap := template.FuncMap{
+	tpl.Funcs(template.FuncMap{
 		"yield": func() (template.HTML, error) {
 			str, err := r.executeByName(name, data)
 			return template.HTML(str), err
@@ -359,9 +370,7 @@ func (r *Renderer) addLayoutFuncs(layout, name string, data any) {
 		// Will add data to included template
 		// "include": includeHandler,
 		// "partial": includeHandler,
-	}
-
-	tpl.Funcs(funcMap)
+	})
 }
 
 /*************************************************************
@@ -446,13 +455,13 @@ func (r *Renderer) getLayoutName(settings []string) string {
 }
 
 func (r *Renderer) requireInit(format string, args ...any) {
-	if !r.initialized {
+	if !r.init {
 		panicf(format, args...)
 	}
 }
 
 func (r *Renderer) cannotInit(format string, args ...any) {
-	if r.initialized {
+	if r.init {
 		panicf(format, args...)
 	}
 }

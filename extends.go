@@ -1,5 +1,6 @@
 package easytpl
 
+// ExtendsTpl definition
 type ExtendsTpl struct {
 	Renderer
 }
