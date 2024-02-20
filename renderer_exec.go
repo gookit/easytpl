@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+
+	"github.com/gookit/goutil/errorx"
 )
 
 /*************************************************************
@@ -94,4 +96,38 @@ func (r *Renderer) executeByName(name string, v any) (string, error) {
 	}
 
 	return r.executeTemplate(tpl, v)
+}
+
+func (r *Renderer) handleInclude(tplName string, data ...any) (template.HTML, error) {
+	if tpl := r.Template(tplName); tpl != nil {
+		var v any
+		if len(data) == 1 {
+			v = data[0]
+		}
+
+		str, err := r.executeTemplate(tpl, v)
+		return template.HTML(str), err
+	}
+	return "", errorx.Ef("the include template %q is not found", tplName)
+}
+
+func (r *Renderer) handleExtends(tplName string, data ...any) (template.HTML, error) {
+	tpl := r.Template(tplName)
+	if tpl == nil {
+		return "", errorx.Ef("the extends template %q is not found", tplName)
+	}
+
+	var v any
+	if len(data) == 1 {
+		v = data[0]
+	}
+
+	// NOTICE: must use a clone instance
+	cpTpl, err := tpl.Clone()
+	if err != nil {
+		return "", err
+	}
+
+	str, err := r.executeTemplate(cpTpl, v)
+	return template.HTML(str), err
 }

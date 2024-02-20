@@ -142,7 +142,7 @@ templates/
 
 ```html
   <h1>Hello, {{ .Name | upper }}</h1>
-  <h2>At template {{ current }}</h2>
+  <h2>At template {{ current_tpl }}</h2>
   <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit.</p>
 ```
 

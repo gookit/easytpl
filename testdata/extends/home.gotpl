@@ -1,0 +1,10 @@
+{{ extends "base.gotpl" . }}
+
+{{/* will replace to base.body block */}}
+{{ define "body"}}
+on home: block body - age: {{ info.age }}.
+{{ end }}
+
+{{ define "footer" }}
+on home: block footer - city: {{ info.city }}.
+{{ end }}

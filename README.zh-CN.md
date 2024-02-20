@@ -83,6 +83,8 @@ func main()  {
 
 ## 布局示例
 
+- `include` 包含其他模板
+
 ```text
 templates/
   |_ layouts/
@@ -93,7 +95,7 @@ templates/
   |_ about.tpl
 ```
 
-- templates/layouts/default.tpl
+`templates/layouts/default.tpl` 布局文件:
 
 ```html
 <html lang="en">
@@ -127,11 +129,11 @@ templates/
 </footer>
 ```
 
-- templates/home.tpl
+`templates/home.tpl, templates/about.tpl` 模板文件:
 
-```html
+```html title="home.tpl"
   <h1>Hello, {{ .Name | upper }}</h1>
-  <h2>At template {{ current }}</h2>
+  <h2>At template {{ current_tpl }}</h2>
   <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit.</p>
 ```
 
@@ -181,7 +183,7 @@ AutoSearchFile bool
 r := easytpl.NewRenderer()
 r.Layout = "layouts/default"
 // ... ...
-r.MustInitialize()
+r.MustInit()
 ```
 
 - 方法 2
@@ -191,7 +193,7 @@ r := easytpl.NewRenderer(func (r *Renderer) {
 	r.Layout = "layouts/default"
 	// ... ...
 })
-r.MustInitialize()
+r.MustInit()
 ```
 
 - 方法 3 (简单快捷)

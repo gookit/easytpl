@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gookit/easytpl"
+	"github.com/gookit/goutil"
 )
 
 var v *easytpl.Renderer
@@ -12,7 +13,7 @@ var v *easytpl.Renderer
 // go run ./_examples/demo.go
 func main() {
 	// equals to call: view.NewRenderer() + r.MustInit()
-	v = easytpl.NewInitialized(func(r *easytpl.Renderer) {
+	v = easytpl.NewInited(func(r *easytpl.Renderer) {
 		// setting default layout
 		r.Layout = "layout" // equals to "layout.tpl"
 		// templates dir. will auto load on init.
@@ -36,22 +37,22 @@ func main() {
 
 func addRoutes() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("<h1>hello, welcome</h1>"))
+		goutil.MustIgnore(w.Write([]byte("<h1>hello, welcome</h1>")))
 	})
 
 	http.HandleFunc("/layout", func(w http.ResponseWriter, r *http.Request) {
-		v.Render(w, "home", "tom")
+		goutil.PanicErr(v.Render(w, "home", "tom"))
 	})
 
 	http.HandleFunc("/no-layout", func(w http.ResponseWriter, r *http.Request) {
-		v.Partial(w, "home", "tom")
+		goutil.PanicErr(v.Partial(w, "home", "tom"))
 	})
 
 	http.HandleFunc("/my-page", func(w http.ResponseWriter, r *http.Request) {
-		v.Partial(w, "my-page", "tom") // welcome tom
+		goutil.PanicErr(v.Partial(w, "my-page", "tom")) // welcome tom
 	})
 
 	http.HandleFunc("/tpl-names", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(v.TemplateNames(true)))
+		goutil.MustIgnore(w.Write([]byte(v.TemplateNames(true))))
 	})
 }

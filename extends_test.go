@@ -10,31 +10,35 @@ import (
 	"github.com/gookit/goutil/testutil/assert"
 )
 
-func _TestUseExtends(t *testing.T) {
+func TestUseExtends(t *testing.T) {
 	bf := new(bytes.Buffer)
 	is := assert.New(t)
 
-	r := easytpl.NewInitialized(func(r *easytpl.Renderer) {
-		r.Debug = true
-		// r.ViewsDir = "testdata/extends"
+	r := easytpl.NewInited(easytpl.WithDebug, func(r *easytpl.Renderer) {
+		r.DisableLayout = true
 	})
 	r.LoadStrings(map[string]string{
 		"home": `{{ extends "layout" . }}
-{{ define "body" }} hello {{.}}{{ end }}`,
+{{ define "body" }} body: hi, {{.}}{{ end }}`,
 		// layout file
 		"layout": `{{ block "header" . }}header{{ end }}
-{{ block "body" . }}default{{ end }}
+{{ block "body" . }} default body{{ end }}
 {{ block "footer" . }}footer{{ end }}`,
 	})
 
-	err := r.Execute(bf, "layout", "inhere")
-	is.Nil(err)
-	is.Equal("header\n hello inhere\nfooter", bf.String())
-	bf.Reset()
+	// t.Run("render layout", func(t *testing.T) {
+	// 	err := r.Execute(bf, "layout", "inhere")
+	// 	is.Nil(err)
+	// 	is.Equal("header\n default body\nfooter", bf.String())
+	// 	bf.Reset()
+	// })
 
-	err = r.Execute(bf, "home", "inhere")
-	is.Nil(err)
-	is.Equal("header\n hello \nfooter\n", bf.String())
+	t.Run("render home", func(t *testing.T) {
+		err := r.Execute(bf, "home", "inhere")
+		fmt.Println(err)
+		is.Nil(err)
+		is.Equal("header\n body: hi, inhere \nfooter\n", bf.String())
+	})
 }
 
 func _Example_Extends() {

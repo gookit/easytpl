@@ -1,0 +1,15 @@
+
+{{ block "header" . }}
+on layout: block header - name: {{ info.name }}.
+{{ end }}
+
+this is in the base.gotpl layout file.
+
+{{ block "body" . }}
+    on layout: block body - age: {{ info.age }}.
+{{ end }}
+
+{{ block "footer" . }}
+    on layout: block footer - city: {{ info.city }}.
+{{ end }}
+

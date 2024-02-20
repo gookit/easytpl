@@ -9,10 +9,7 @@ Usage please see example and README.
 */
 package easytpl
 
-import (
-	"html/template"
-	"io"
-)
+import "html/template"
 
 // DefaultExt name
 const DefaultExt = ".tpl"
@@ -26,39 +23,48 @@ type TplDelims struct {
 	Right string
 }
 
-// create an default instance
-var std = NewRenderer()
+// Options for renderer
+type Options struct {
+	// Debug setting
+	Debug bool
+	// Layout template name for default.
+	Layout string
+	// Delims define for template
+	Delims TplDelims
+	// ViewsDir the default views directory, multi dirs use "," split
+	ViewsDir string
+	// ExtNames supported template extensions, without dot prefix. eg {"tpl", "html"}
+	ExtNames []string
+	// FuncMap func map for template
+	FuncMap template.FuncMap
+	// DisableLayout disable apply layout render. default is False
+	DisableLayout bool
+	// EnableExtends enable extends feature. default is False
+	EnableExtends bool
+	// AutoSearchFile
+	// TODO: auto search template file, when not found on compiled templates. default is False
+	AutoSearchFile bool
+}
 
-// Reset the default instance
-func Reset() { std = NewRenderer() }
+// OptionFn for renderer
+type OptionFn func(r *Renderer)
 
-// Revert the default instance, alias of Reset()
-func Revert() { Reset() }
+// New create a new template renderer, but not initialized.
+func New(fns ...OptionFn) *Renderer { return NewRenderer(fns...) }
 
-// Default get default instance
-func Default() *Renderer { return std }
+// NewInited create a new and initialized template renderer. alias of NewInitialized()
+func NewInited(fns ...OptionFn) *Renderer {
+	return NewRenderer(fns...).MustInit()
+}
 
-// AddFunc add template func
-func AddFunc(name string, fn any) { std.AddFunc(name, fn) }
+// NewExtends create a new and initialized template renderer. default enable extends feature.
+func NewExtends(fns ...OptionFn) *Renderer {
+	return NewRenderer(fns...).WithOptions(EnableExtends).MustInit()
+}
 
-// AddFuncMap add template func map
-func AddFuncMap(fm template.FuncMap) { std.AddFuncMap(fm) }
-
-// LoadString load named template string.
-func LoadString(tplName string, tplString string) { std.LoadString(tplName, tplString) }
-
-// LoadStrings load multi named template strings
-func LoadStrings(sMap map[string]string) { std.LoadStrings(sMap) }
-
-// LoadFiles load custom template files.
-func LoadFiles(files ...string) { std.LoadFiles(files...) }
-
-// LoadByGlob load templates by glob pattern.
-func LoadByGlob(pattern string, baseDirs ...string) { std.LoadByGlob(pattern, baseDirs...) }
-
-// Initialize the default instance with config func
-func Initialize(fns ...ConfigFn) {
-	std.WithConfig(fns...).MustInit()
+// NewInitialized create a new and initialized view renderer.
+func NewInitialized(fns ...OptionFn) *Renderer {
+	return NewRenderer(fns...).MustInit()
 }
 
 /*************************************************************
@@ -69,7 +75,7 @@ func Initialize(fns ...ConfigFn) {
 func WithDebug(r *Renderer) { r.Debug = true }
 
 // WithLayout set the layout template name.
-func WithLayout(layoutName string) ConfigFn {
+func WithLayout(layoutName string) OptionFn {
 	return func(r *Renderer) {
 		r.Layout = layoutName
 		r.DisableLayout = false
@@ -82,34 +88,13 @@ func DisableLayout(r *Renderer) {
 	r.DisableLayout = true
 }
 
+// EnableExtends enable extends feature.
+func EnableExtends(r *Renderer) { r.EnableExtends = true }
+
 // WithTplDirs set template dirs
-func WithTplDirs(dirs string) ConfigFn {
+func WithTplDirs(dirs string) OptionFn {
 	return func(r *Renderer) { r.ViewsDir = dirs }
 }
 
 // WithViewDirs set template dirs, alias of WithTplDirs()
-func WithViewDirs(dirs string) ConfigFn { return WithTplDirs(dirs) }
-
-/*************************************************************
- * render templates
- *************************************************************/
-
-// Render a template name/file with layout, write result to the Writer.
-func Render(w io.Writer, tplName string, v any, layout ...string) error {
-	return std.Render(w, tplName, v, layout...)
-}
-
-// Execute render partial, will not render layout file
-func Execute(w io.Writer, tplName string, v any) error {
-	return std.Execute(w, tplName, v)
-}
-
-// Partial is alias of the Execute()
-func Partial(w io.Writer, tplName string, v any) error {
-	return std.Execute(w, tplName, v)
-}
-
-// String render a template string
-func String(w io.Writer, tplStr string, v any) error {
-	return std.String(w, tplStr, v)
-}
+func WithViewDirs(dirs string) OptionFn { return WithTplDirs(dirs) }

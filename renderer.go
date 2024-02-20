@@ -1,6 +1,7 @@
 package easytpl
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"os"
@@ -13,6 +14,7 @@ import (
 
 // Renderer definition
 type Renderer struct {
+	Options
 	bufPool *bufferPool
 	// mark renderer is initialized
 	init bool
@@ -26,60 +28,40 @@ type Renderer struct {
 	// 	... ...
 	// }
 	root *template.Template
+
+	// from ViewsDir, split by comma
+	tplDirs []string
 	// supported template file extension names
 	extMap map[string]uint8
 	// loaded template files. {"tpl name": "file path"}
 	fileMap map[string]string
-	// from ViewsDir, split by comma
-	tplDirs []string
 
-	// Debug setting
-	Debug bool
-	// Layout template name for default.
-	Layout string
-	// Delims define for template
-	Delims TplDelims
-	// ViewsDir the default views directory, multi dirs use "," split
-	ViewsDir string
-	// ExtNames supported template extensions, without dot prefix. eg {"tpl", "html"}
-	ExtNames []string
-	// FuncMap func map for template
-	FuncMap template.FuncMap
-	// DisableLayout disable apply layout render. default is False
-	DisableLayout bool
-	// AutoSearchFile
-	// TODO: auto search template file, when not found on compiled templates. default is False
-	AutoSearchFile bool
+	// parsed from tpl file first line.
+	//
+	// eg: home.tpl: {{ extends "some/base.tpl" }}
+	// -> baseTpl = {"home": "some/base.tpl", }
+	//
+	// Note: this is for extends feature on Options.EnableExtends is True
+	baseTpl map[string]string
 }
-
-// ConfigFn for renderer
-type ConfigFn func(r *Renderer)
 
 // NewRenderer create a new view renderer
-func NewRenderer(fns ...ConfigFn) *Renderer {
+func NewRenderer(fns ...OptionFn) *Renderer {
 	r := &Renderer{
-		Delims:   TplDelims{"{{", "}}"},
-		FuncMap:  make(template.FuncMap),
-		ExtNames: []string{"tpl", "html"},
-		bufPool:  newBufferPool(),
-		fileMap:  make(map[string]string),
+		bufPool: newBufferPool(),
+		fileMap: make(map[string]string),
+		Options: Options{
+			Delims:   TplDelims{"{{", "}}"},
+			FuncMap:  make(template.FuncMap),
+			ExtNames: []string{"tpl", "html"},
+		},
 	}
 
-	return r.WithConfig(fns...)
+	return r.WithOptions(fns...)
 }
 
-// NewInited create a new and initialized template renderer. alias of NewInitialized()
-func NewInited(fns ...ConfigFn) *Renderer {
-	return NewRenderer(fns...).MustInit()
-}
-
-// NewInitialized create a new and initialized view renderer.
-func NewInitialized(fns ...ConfigFn) *Renderer {
-	return NewRenderer(fns...).MustInit()
-}
-
-// WithConfig apply config functions
-func (r *Renderer) WithConfig(fns ...ConfigFn) *Renderer {
+// WithOptions apply config functions
+func (r *Renderer) WithOptions(fns ...OptionFn) *Renderer {
 	for _, fn := range fns {
 		fn(r)
 	}
@@ -93,7 +75,6 @@ func (r *Renderer) WithConfig(fns ...ConfigFn) *Renderer {
 // AddFunc add template func
 func (r *Renderer) AddFunc(name string, fn any) {
 	r.cannotInit("cannot add template func after initialized")
-
 	if reflect.TypeOf(fn).Kind() != reflect.Func {
 		panicf("the template func [%s] type must be a function", name)
 	}
@@ -157,39 +138,10 @@ func (r *Renderer) Init() error {
 
 	// add custom template func
 	r.AddFuncMap(globalFuncMap)
-	r.AddFunc("include", func(tplName string, data ...any) (template.HTML, error) {
-		if tpl := r.Template(tplName); tpl != nil {
-			var v any
-			if len(data) == 1 {
-				v = data[0]
-			}
-
-			str, err := r.executeTemplate(tpl, v)
-			return template.HTML(str), err
-		}
-
-		return "", nil
-	})
-	r.AddFunc("extends", func(tplName string, data ...any) (template.HTML, error) {
-		if tpl := r.Template(tplName); tpl != nil {
-			var v any
-			if len(data) == 1 {
-				v = data[0]
-			}
-
-			// NOTICE: must use a clone instance
-			str, err := r.executeTemplate(tpl, v)
-			return template.HTML(str), err
-		}
-
-		return "", nil
-	})
+	r.AddFunc("include", r.handleInclude)
+	// r.AddFunc("extends", r.handleExtends)
 
 	r.init = true
-	if r.fileMap == nil {
-		r.fileMap = make(map[string]string)
-	}
-
 	// compile templates
 	if err := r.compileTemplates(); err != nil {
 		return err
@@ -234,9 +186,9 @@ func (r *Renderer) LoadByGlob(pattern string, baseDirs ...string) {
 			panicErr(err)
 		}
 
-		// eg: relPath="path/to/some.tpl" -> name="some"
+		// name: path without extension
 		name := filepath.ToSlash(relPath[0 : len(relPath)-len(ext)])
-		r.loadTemplateFile(name, path)
+		r.LoadFile(name, path)
 	}
 }
 
@@ -251,10 +203,21 @@ func (r *Renderer) LoadFiles(files ...string) {
 	for _, file := range files {
 		ext := filepath.Ext(file)
 		if r.IsValidExt(ext) {
+			// name: path without extension
 			name := filepath.ToSlash(file[0 : len(file)-len(ext)])
-			r.loadTemplateFile(name, file)
+			r.LoadFile(name, file)
 		}
 	}
+}
+
+// LoadFile load named template file. will panic on error
+func (r *Renderer) LoadFile(tplName, filePath string) {
+	bs, err := os.ReadFile(filePath)
+	panicErr(err)
+
+	r.fileMap[tplName] = filePath
+	r.debugf("load template file: %s, template name: %s", filePath, tplName)
+	r.loadBytes(tplName, bs)
 }
 
 // LoadString load named template string. will panic on error
@@ -263,20 +226,44 @@ func (r *Renderer) LoadFiles(files ...string) {
 //
 //	r.LoadString("my-page", "welcome {{.}}")
 //	// now, you can use "my-page" as a template name
-//	r.Partial(w, "my-page", "tom") // Result: welcome tom
-func (r *Renderer) LoadString(tplName string, tplText string) {
-	r.ensureRoot()
-	r.debugf("load named template contents, name is: %s", tplName)
-
-	// Create new template in the root, will inherit delimiters and add func map
-	template.Must(r.root.New(r.cleanExt(tplName)).Parse(tplText))
+//	r.Partial(w, "my-page", "tom") // Result: "welcome tom"
+func (r *Renderer) LoadString(tplName, tplText string) {
+	r.debugf("load named template text, name is: %s", tplName)
+	r.loadBytes(tplName, []byte(tplText))
 }
 
-// LoadStrings load multi named template strings
+// LoadStrings load multi named template strings.
+// key is template name, value is template contents.
 func (r *Renderer) LoadStrings(sMap map[string]string) {
 	for name, tplStr := range sMap {
 		r.LoadString(name, tplStr)
 	}
+}
+
+// LoadBytes load named template bytes. will panic on error
+func (r *Renderer) LoadBytes(tplName string, tplText []byte) {
+	r.debugf("load named template bytes, name is: %s", tplName)
+	r.loadBytes(tplName, tplText)
+}
+
+func (r *Renderer) loadBytes(tplName string, tplText []byte) {
+	r.ensureRoot()
+
+	// parse the first line of the text, collect the base template name
+	if r.EnableExtends {
+		bs := tplText
+		bs = bytes.TrimLeft(bs, "\n\t ")
+
+		if i := bytes.IndexByte(bs, '\n'); i >= 0 {
+			if baseTpl, ok := getExtendsTplName(bs[0:i], r.Delims); ok {
+				r.baseTpl[tplName] = baseTpl
+				bs = bs[i+1:] // remove the first line
+			}
+		}
+	}
+
+	// create new template in the root, will inherit delimiters and all func map
+	template.Must(r.root.New(tplName).Parse(string(tplText)))
 }
 
 /*************************************************************
@@ -287,6 +274,10 @@ func (r *Renderer) ensureRoot() {
 	r.requireInit("must call Initialize() before current operation")
 	if r.root == nil {
 		r.root = template.New("ROOT").Funcs(r.FuncMap)
+	}
+
+	if r.fileMap == nil {
+		r.fileMap = make(map[string]string)
 	}
 }
 
@@ -327,21 +318,10 @@ func (r *Renderer) compileInDir(dir string) error {
 		// load on is supported extension
 		if _, has := r.extMap[ext]; has {
 			name := rel[0 : len(rel)-len(ext)]
-			r.loadTemplateFile(name, path)
+			r.LoadFile(name, path)
 		}
 		return err
 	})
-}
-
-func (r *Renderer) loadTemplateFile(tplName, filePath string) {
-	bs, err := os.ReadFile(filePath)
-	panicErr(err)
-
-	r.fileMap[tplName] = filePath
-	r.debugf("load template file: %s, template name: %s", filePath, tplName)
-
-	// create new template in the root, will inherit delimiters and all func map
-	template.Must(r.root.New(tplName).Parse(string(bs)))
 }
 
 // name the template name
@@ -434,12 +414,12 @@ func (r *Renderer) cleanExt(name string) string {
 	return name
 }
 
-func (r *Renderer) getLayoutName(settings []string) string {
+func (r *Renderer) getLayoutName(tplNames []string) string {
 	var layout string
-
 	disableLayout := r.DisableLayout
-	if len(settings) > 0 {
-		layout = strings.TrimSpace(settings[0])
+
+	if len(tplNames) > 0 {
+		layout = strings.TrimSpace(tplNames[0])
 		if layout == "" {
 			disableLayout = true
 		}
@@ -447,11 +427,10 @@ func (r *Renderer) getLayoutName(settings []string) string {
 		layout = r.Layout
 	}
 
-	// Apply layout
-	if !disableLayout && layout != "" {
-		return layout
+	if disableLayout {
+		return ""
 	}
-	return ""
+	return layout
 }
 
 func (r *Renderer) requireInit(format string, args ...any) {

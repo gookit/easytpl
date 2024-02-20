@@ -41,6 +41,26 @@ func panicErr(err error) {
 	}
 }
 
+var extendsBytes = []byte("extends ")
+
+// parse line '{{ extend "parent.tpl" }}' and get "parent.tpl"
+func getExtendsTplName(line []byte, td TplDelims) (string, bool) {
+	line = bytes.TrimRight(line, " \t")
+
+	if bytes.HasPrefix(line, []byte(td.Left)) &&
+		bytes.HasSuffix(line, []byte(td.Right)) &&
+		bytes.Contains(line, extendsBytes) {
+		leftLen, rightLen := len(td.Left), len(td.Right)
+
+		// remove left and right delimiters and spaces
+		content := bytes.Trim(line[leftLen:len(line)-rightLen], " \"'")
+		// remove "extends " prefix
+		return string(bytes.TrimLeft(content[8:], " \"'")), true
+	}
+
+	return "", false
+}
+
 /*************************************************************
  * buffer Pool
  *************************************************************/
