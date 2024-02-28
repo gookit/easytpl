@@ -3,28 +3,8 @@ package easytpl
 import (
 	"bytes"
 	"fmt"
-	"html/template"
-	"strings"
 	"sync"
 )
-
-// match '{{ extend "parent.tpl" }}'
-// var extendsRegex = regexp.MustCompile(`{{ *?extends +?"(.+?)" *?}}`)
-
-var globalFuncMap = template.FuncMap{
-	// don't escape content
-	"raw":   func(s string) template.HTML { return template.HTML(s) },
-	"trim":  strings.TrimSpace,
-	"join":  strings.Join,
-	"lower": strings.ToLower,
-	"upper": strings.ToUpper,
-	"yield": func() (string, error) {
-		return "", fmt.Errorf("yield called with no layout defined")
-	},
-	// add an empty func for compile
-	"current_tpl": func() string { return "" },
-	"extends":     func(name string) string { return "" },
-}
 
 func panicf(format string, args ...any) {
 	if len(args) > 0 {
@@ -41,6 +21,8 @@ func panicErr(err error) {
 	}
 }
 
+// match '{{ extend "parent.tpl" }}'
+// var extendsRegex = regexp.MustCompile(`{{ *?extends +?"(.+?)" *?}}`)
 var extendsBytes = []byte("extends ")
 
 // parse line '{{ extend "parent.tpl" }}' and get "parent.tpl"

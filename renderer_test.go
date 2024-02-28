@@ -52,7 +52,9 @@ func TestRenderer_AddFunc(t *testing.T) {
 	is := assert.New(t)
 
 	r := easytpl.NewRenderer()
-	r.AddFunc("test1", func() {})
+	r.AddFunc("test1", func() string {
+		return "TEST1"
+	})
 	is.Panics(func() {
 		r.AddFunc("test2", "invalid")
 	})
@@ -64,32 +66,32 @@ func TestRenderer_AddFunc(t *testing.T) {
 }
 
 func TestRenderer_LoadByGlob(t *testing.T) {
-	bf := new(bytes.Buffer)
 	is := assert.New(t)
+	bf := new(bytes.Buffer)
 
-	r := easytpl.NewInitialized(func(r *easytpl.Renderer) {
-		// r.Debug = true
+	t.Run("pattern", func(t *testing.T) {
+		r := easytpl.NewInited(easytpl.WithDebug)
+		r.LoadByGlob("testdata/*")
+		// r.LoadByGlob("testdata/*.tpl")
+		err := r.Render(bf, "not-exist", "tom")
+		is.Error(err)
+		bf.Reset()
+
+		err = r.Render(bf, "testdata/hello", "tom")
+		is.Nil(err)
+		is.Equal("hello tom", bf.String())
+		bf.Reset()
 	})
-	r.LoadByGlob("testdata/layouts/*")
-	// r.LoadByGlob("testdata/layouts/*.tpl")
-	err := r.Render(bf, "not-exist", "tom")
-	is.Error(err)
-	bf.Reset()
 
-	err = r.Render(bf, "testdata/hello", "tom")
-	is.Nil(err)
-	is.Equal("hello tom", bf.String())
+	t.Run("with basedir", func(t *testing.T) {
+		r := easytpl.NewInited(easytpl.WithDebug)
+		r.LoadByGlob("testdata/*.tpl", "testdata/")
+		bf.Reset()
 
-	r = easytpl.NewInitialized(func(r *easytpl.Renderer) {
-		// r.Debug = true
+		err := r.Render(bf, "hello", "tom")
+		is.Nil(err)
+		is.Equal("hello tom", bf.String())
 	})
-	r.LoadByGlob("testdata/*", "testdata/")
-	// r.LoadByGlob("testdata/*.tpl")
-	bf.Reset()
-
-	err = r.Render(bf, "hello", "tom")
-	is.Nil(err)
-	is.Equal("hello tom", bf.String())
 }
 
 func TestRenderer_LoadFiles(t *testing.T) {
@@ -169,7 +171,7 @@ func TestRenderer_String(t *testing.T) {
 func TestRenderer_LoadStrings(t *testing.T) {
 	bf := new(bytes.Buffer)
 	is := assert.New(t)
-	r := easytpl.NewRenderer(easytpl.WithLayout("layout"))
+	r := easytpl.New(easytpl.WithLayout("layout"))
 	is.NoError(r.Initialize())
 
 	r.LoadStrings(map[string]string{
@@ -224,8 +226,7 @@ func TestRenderer_LoadStrings(t *testing.T) {
 	// include not exist
 	bf.Reset()
 	err = r.Partial(bf, "other", easytpl.M{"name": "tom"})
-	is.Nil(err)
-	is.Equal("at other:", bf.String())
+	is.Error(err)
 }
 
 func TestRenderer_Partial(t *testing.T) {

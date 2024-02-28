@@ -36,17 +36,24 @@ import (
 
 // FuncMap returns the default FuncMap.
 func FuncMap() template.FuncMap {
+	return simpleMergeMultiMap(stdFuncMap) // TODO add more funcs
+}
+
+// StdFuncMap returns the default template func map.
+func StdFuncMap() template.FuncMap {
 	return stdFuncMap
 }
 
+// stdFuncMap is the default template func map.
 var stdFuncMap = map[string]any{
-	// String
+	// String:
 	"join":  strings.Join,
 	"trim":  strings.TrimSpace,
 	"upper": strings.ToUpper,
 	"lower": strings.ToLower,
-	// uppercase first char
+	// - uppercase first char
 	"ucFirst": strutil.UpFirst,
+	"loFirst": strutil.LowerFirst,
 
 	// OS:
 	"env":       os.Getenv,
@@ -65,4 +72,15 @@ var stdFuncMap = map[string]any{
 	"osDir":   filepath.Dir,
 	"osExt":   filepath.Ext,
 	"osIsAbs": filepath.IsAbs,
+}
+
+// simpleMergeMultiMap merge multi any map[string]any data.
+func simpleMergeMultiMap(mps ...map[string]any) map[string]any {
+	newMp := make(map[string]any)
+	for _, mp := range mps {
+		for k, v := range mp {
+			newMp[k] = v
+		}
+	}
+	return newMp
 }
