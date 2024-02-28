@@ -9,10 +9,14 @@ Usage please see example and README.
 */
 package easytpl
 
-import "html/template"
+import (
+	"fmt"
+	"html/template"
+)
 
 // DefaultExt name
 const DefaultExt = ".tpl"
+const DefaultExt1 = ".tmpl"
 
 // M a short type for map[string]any
 type M map[string]any
@@ -23,13 +27,22 @@ type TplDelims struct {
 	Right string
 }
 
+// default global built in func map
+var builtInFuncMap = template.FuncMap{
+	// don't escape content
+	"raw": func(s string) template.HTML { return template.HTML(s) },
+	// add some empty func for resolve compile error
+	"yield": func() (string, error) {
+		return "", fmt.Errorf("yield called with no layout defined")
+	},
+	"current_tpl": func() string { return "" },
+}
+
 // Options for renderer
 type Options struct {
-	// Debug setting
+	// Debug mode for development.
 	Debug bool
-	// Layout template name for default.
-	Layout string
-	// Delims define for template
+	// Delims define for template. default is "{{", "}}"
 	Delims TplDelims
 	// ViewsDir the default views directory, multi dirs use "," split
 	ViewsDir string
@@ -37,10 +50,23 @@ type Options struct {
 	ExtNames []string
 	// FuncMap func map for template
 	FuncMap template.FuncMap
+
+	// Layout template name for default.
+	Layout string
 	// DisableLayout disable apply layout render. default is False
 	DisableLayout bool
+
 	// EnableExtends enable extends feature. default is False
 	EnableExtends bool
+	// ExtendsBase template file map. available when extends feature is enabled.
+	// 	- Key is tpl name, value is base tpl file path.
+	//
+	// Example:
+	// 	{"base": "/path/to/base.tpl"}
+	// Use on template page.tpl:
+	// 	{{ extends "base" }}
+	// 	{{ define "body" }} ... {{ end }}
+	ExtendsBase map[string]string
 	// AutoSearchFile
 	// TODO: auto search template file, when not found on compiled templates. default is False
 	AutoSearchFile bool
@@ -68,7 +94,7 @@ func NewInitialized(fns ...OptionFn) *Renderer {
 }
 
 /*************************************************************
- * render config func
+ * renderer options config func
  *************************************************************/
 
 // WithDebug set enable debug mode.
