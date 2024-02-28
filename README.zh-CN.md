@@ -5,7 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/gookit/easytpl)](https://goreportcard.com/report/github.com/gookit/easytpl)
 [![Unit-Tests](https://github.com/gookit/easytpl/workflows/Unit-Tests/badge.svg)](https://github.com/gookit/easytpl/actions)
 
-一个简单的视图渲染器，基于golang `html/template` 封装，但更加简单易用。
+一个简单的模板渲染器，基于Golang `html/template` 封装，但更加简单易用。
 
 > **[EN README](README.md)**
 
@@ -15,6 +15,7 @@
 - 支持布局文件渲染
   - eg `{{ include "header" }} {{ yield }} {{ include "footer" }}`
 - 支持引入其他模板 eg `{{ include "other" }}`
+- 支持使用 `extends` 继承基础模板. eg `{{ extends "base.tpl" }}`
 - 内置一些常用的模板方法 `row`, `lower`, `upper`, `join` ...
 
 ## GoDoc
@@ -81,7 +82,7 @@ func main()  {
 
 > 跟多API请参考 [GoDoc](https://pkg.go.dev/github.com/gookit/easytpl) 
 
-## 布局示例
+## layout 布局示例
 
 - `include` 包含其他模板
 
@@ -137,10 +138,10 @@ templates/
   <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit.</p>
 ```
 
-### 使用
+### 使用示例
 
 ```go
-v := easytpl.NewInitialized(func(r *easytpl.Renderer) {
+v := easytpl.NewInited(func(r *easytpl.Renderer) {
     // setting default layout
     r.Layout = "layouts/default" // equals to "layouts/default.tpl"
     // templates dir. will auto load on init.
@@ -150,8 +151,72 @@ v := easytpl.NewInitialized(func(r *easytpl.Renderer) {
 http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 	v.Render(w, "home", easytpl.M{"Name": "tom"})
 })
-log.Println("Listening port: 9100")
+
+slog.Println("Listening port: 9100")
 http.ListenAndServe(":9100", nil)
+```
+
+## `extends` 继承示例
+
+可以使用 `extends` 语句继承基础模板. eg `{{ extends "base.tpl" }}`
+
+> 注意: `extends` 语句必须在模板文件的第一行
+
+```text
+templates/
+  |_ base.tpl
+  |_ home.tpl
+  |_ about.tpl
+```
+
+`templates/base.tpl` 基础模板文件:
+
+```gotemplate title="base.tpl"
+<html lang="en">
+  <head>
+    <title>layout example</title>
+  </head>
+  <body>
+    {{ block "content" . }}
+    <h1>Hello, at base template</h1>
+    {{ end }}
+  </body>
+</html>
+```
+
+`templates/home.tpl, templates/about.tpl` 模板文件:
+
+```gotemplate title="home.tpl"
+  {{ extends "base" }}
+{{ define "content" }}
+  <h1>Hello, {{ .Name | upper }}</h1>
+  <h2>At template {{ current_tpl }}</h2>
+  <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit.</p>
+{{ end }}
+```
+
+### 使用示例
+
+```go
+package main
+
+import (
+    "net/http"
+    
+    "github.com/gookit/easytpl"
+    "github.com/gookit/slog"
+)
+
+func main() {
+    v := easytpl.NewExtends(easytpl.WithTplDirs("templates"))
+
+    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+        v.Render(w, "home", easytpl.M{"Name": "tom"})
+    })
+    
+    slog.Info("Listening port: 9100")
+    http.ListenAndServe(":9100", nil)
+}
 ```
 
 ## 可用选项
@@ -159,7 +224,7 @@ http.ListenAndServe(":9100", nil)
 ```go
 // 开启调试
 Debug bool
-// 默认的视图模板目录
+// 默认的视图模板目录，可以是多个目录，使用逗号分隔
 ViewsDir string
 // 布局模板名称
 Layout string
@@ -199,7 +264,7 @@ r.MustInit()
 - 方法 3 (简单快捷)
 
 ```go
-r := easytpl.NewInitialized(func (r *Renderer) {
+r := easytpl.NewInited(func (r *Renderer) {
 	r.Layout = "layouts/default" 
 	// ... ...
 })

@@ -5,7 +5,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/gookit/easytpl)](https://goreportcard.com/report/github.com/gookit/easytpl)
 [![Unit-Tests](https://github.com/gookit/easytpl/workflows/Unit-Tests/badge.svg)](https://github.com/gookit/easytpl/actions)
 
-A simple template renderer based on the `html/template`, but much simpler to use. Support layout rendering, including templates.
+A simple template renderer based on the Go `html/template`, but much simpler to use. 
+Support layout rendering, including templates.
 
 > **[中文说明](README.zh-CN.md)**
 
@@ -17,6 +18,8 @@ A simple template renderer based on the `html/template`, but much simpler to use
 - support layout render. 
   - eg `{{ include "header" }} {{ yield }} {{ include "footer" }}`
 - support include other templates. eg `{{ include "other" }}`
+- support `extends` base templates. eg `{{ extends "base.tpl" }}`
+- support custom template functions
 - built-in some helper methods `row`, `lower`, `upper`, `join` ...
 
 ## Godoc
@@ -80,7 +83,7 @@ func main()  {
 }
 ```
 
-> more APIS please [GoDoc](https://pkg.go.dev/github.com/gookit/easytpl) 
+> more APIs please [GoDoc](https://pkg.go.dev/github.com/gookit/easytpl) 
 
 ## Layout Example
 
@@ -140,7 +143,7 @@ templates/
 
 - `templates/home.tpl`
 
-```html
+```gotemplate title="home.tpl"
   <h1>Hello, {{ .Name | upper }}</h1>
   <h2>At template {{ current_tpl }}</h2>
   <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit.</p>
@@ -149,7 +152,7 @@ templates/
 ### Usage
 
 ```go
-v := easytpl.NewInitialized(func(r *easytpl.Renderer) {
+v := easytpl.NewInited(func(r *easytpl.Renderer) {
     // setting default layout
     r.Layout = "layouts/default" // equals to "layouts/default.tpl"
     // templates dir. will auto load on init.
@@ -159,8 +162,72 @@ v := easytpl.NewInitialized(func(r *easytpl.Renderer) {
 http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 	v.Render(w, "home", easytpl.M{"Name": "tom"})
 })
-log.Println("Listening port: 9100")
+slog.Println("Listening port: 9100")
 http.ListenAndServe(":9100", nil)
+```
+
+## `extends` example
+
+A base template can be inherited using the `{{ extends "base.tpl" }}` statement.
+
+> Note: The `extends` statement must be on the first line of the template file
+
+```text
+templates/
+  |_ base.tpl
+  |_ home.tpl
+  |_ about.tpl
+```
+
+`templates/base.tpl` base template contents:
+
+```gotemplate title="base.tpl"
+<html lang="en">
+  <head>
+    <title>layout example</title>
+  </head>
+  <body>
+    {{ block "content" . }}
+    <h1>Hello, at base template</h1>
+    {{ end }}
+  </body>
+</html>
+```
+
+`templates/home.tpl` contents:
+
+```gotemplate title="home.tpl"
+{{ extends "base" }}
+
+{{ define "content" }}
+  <h1>Hello, {{ .Name | upper }}</h1>
+  <h2>At template {{ current_tpl }}</h2>
+  <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit.</p>
+{{ end }}
+```
+
+### Usage
+
+```go
+package main
+
+import (
+    "net/http"
+    
+    "github.com/gookit/easytpl"
+    "github.com/gookit/slog"
+)
+
+func main() {
+    v := easytpl.NewExtends(easytpl.WithTplDirs("templates"))
+
+    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+        v.Render(w, "home", easytpl.M{"Name": "tom"})
+    })
+    
+    slog.Info("Listening port: 9100")
+    http.ListenAndServe(":9100", nil)
+}
 ```
 
 ## Available Options
@@ -172,7 +239,7 @@ Debug bool
 Layout string
 // Delims define for template
 Delims TplDelims
-// ViewsDir the default views directory
+// ViewsDir the default views directory, multi use "," split
 ViewsDir string
 // ExtNames allowed template extensions. eg {"tpl", "html"}
 ExtNames []string
