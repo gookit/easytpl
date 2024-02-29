@@ -1,6 +1,6 @@
 # EasyTpl
 
-[![GoDoc](https://pkg.go.dev/github.com/gookit/easytpl?status.svg)](https://pkg.go.dev/github.com/gookit/easytpl)
+[![GoDoc](https://pkg.go.dev/badge/github.com/gookit/easytpl.svg)](https://pkg.go.dev/github.com/gookit/easytpl)
 [![Coverage Status](https://coveralls.io/repos/github/gookit/easytpl/badge.svg?branch=master)](https://coveralls.io/github/gookit/easytpl?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gookit/easytpl)](https://goreportcard.com/report/github.com/gookit/easytpl)
 [![Unit-Tests](https://github.com/gookit/easytpl/workflows/Unit-Tests/badge.svg)](https://github.com/gookit/easytpl/actions)
@@ -39,8 +39,8 @@ import (
 )
 
 func main()  {
-	// equals to call: easytpl.NewRenderer() + r.MustInitialize()
-	r := easytpl.NewInitialized(func(r *easytpl.Renderer) {
+	// equals to call: easytpl.NewRenderer() + r.MustInit()
+	r := easytpl.NewInited(func(r *easytpl.Renderer) {
 		// setting default layout
 		r.Layout = "layout" // equals to "layout.tpl"
 		// templates dir. will auto load on init.
@@ -259,7 +259,7 @@ AutoSearchFile bool
 r := easytpl.NewRenderer()
 r.Layout = "layouts/default"
 // ... ...
-r.MustInitialize()
+r.MustInit()
 ```
 
 - method 2
@@ -269,13 +269,13 @@ r := easytpl.NewRenderer(func (r *Renderer) {
 	r.Layout = "layouts/default"
 	// ... ...
 })
-r.MustInitialize()
+r.MustInit()
 ```
 
 - method 3
 
 ```go
-r := easytpl.NewInitialized(func (r *Renderer) {
+r := easytpl.NewInited(func (r *Renderer) {
 	r.Layout = "layouts/default" 
 	// ... ...
 })

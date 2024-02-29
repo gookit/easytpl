@@ -1,11 +1,11 @@
 # EasyTpl
 
-[![GoDoc](https://pkg.go.dev/github.com/gookit/easytpl?status.svg)](https://pkg.go.dev/github.com/gookit/easytpl)
+[![GoDoc](https://pkg.go.dev/badge/github.com/gookit/easytpl.svg)](https://pkg.go.dev/github.com/gookit/easytpl)
 [![Coverage Status](https://coveralls.io/repos/github/gookit/easytpl/badge.svg?branch=master)](https://coveralls.io/github/gookit/easytpl?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gookit/easytpl)](https://goreportcard.com/report/github.com/gookit/easytpl)
 [![Unit-Tests](https://github.com/gookit/easytpl/workflows/Unit-Tests/badge.svg)](https://github.com/gookit/easytpl/actions)
 
-一个简单的模板渲染器，基于Golang `html/template` 封装，但更加简单易用。
+简单易用的模板渲染器，基于Golang `html/template` 封装。
 
 > **[EN README](README.md)**
 
@@ -35,8 +35,8 @@ import (
 )
 
 func main()  {
-	// NewInitialized() 等同于同时调用: easytpl.NewRenderer() + r.MustInitialize()
-	r := easytpl.NewInitialized(func(r *easytpl.Renderer) {
+	// NewInited() 等同于同时调用: easytpl.NewRenderer() + r.MustInit()
+	r := easytpl.NewInited(func(r *easytpl.Renderer) {
 		// 设置默认布局模板
 		r.Layout = "layout" // 等同于 "layout.tpl"
 		// 模板目录。将在初始化是自动加载编译里面的模板文件
@@ -114,7 +114,7 @@ templates/
 </html>
 ```
 
-- templates/layouts/header.tpl
+`templates/layouts/header.tpl` 文件:
 
 ```html
 <header>
@@ -122,7 +122,7 @@ templates/
 </header>
 ```
 
-- templates/layouts/footer.tpl
+`templates/layouts/footer.tpl` 文件:
 
 ```html
 <footer>
@@ -130,9 +130,9 @@ templates/
 </footer>
 ```
 
-`templates/home.tpl, templates/about.tpl` 模板文件:
+`templates/home.tpl, templates/about.tpl` 页面模板文件:
 
-```html title="home.tpl"
+```gotemplate title="home.tpl"
   <h1>Hello, {{ .Name | upper }}</h1>
   <h2>At template {{ current_tpl }}</h2>
   <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit.</p>
@@ -245,7 +245,7 @@ AutoSearchFile bool
 - 方法 1
 
 ```go
-r := easytpl.NewRenderer()
+r := easytpl.New()
 r.Layout = "layouts/default"
 // ... ...
 r.MustInit()
