@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/gookit/easytpl/tplfunc"
-	"github.com/gookit/goutil/basefn"
 	"github.com/gookit/goutil/maputil"
+	"github.com/gookit/goutil/x/basefn"
 )
 
 // Renderer definition
@@ -433,6 +433,7 @@ func (r *Renderer) addLayoutFuncs(layout, name string, data any) {
 	// 	}
 
 	r.debugf("add funcs[yield, partial] to layout template: %s, target template: %s", layout, name)
+	//goland:noinspection ALL
 	tpl.Funcs(template.FuncMap{
 		"yield": func() (template.HTML, error) {
 			bs, err := r.executeByName(name, data)
