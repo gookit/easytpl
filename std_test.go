@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/gookit/easytpl"
-	"github.com/gookit/goutil/testutil/assert"
+	"github.com/gookit/goutil/x/assert"
 )
 
 func TestStd_instance(t *testing.T) {
