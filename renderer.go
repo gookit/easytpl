@@ -395,9 +395,9 @@ func (r *Renderer) compileInDir(dir string) error {
 
 		// Path is full path, rel is relative path
 		// e.g. path: "testdata/admin/footer.tpl" -> rel: "admin/footer.tpl"
-		rel, err := filepath.Rel(dir, path)
-		if err != nil {
-			return err
+		rel, relErr := filepath.Rel(dir, path)
+		if relErr != nil {
+			return relErr
 		}
 
 		// skip no extension file
@@ -408,7 +408,7 @@ func (r *Renderer) compileInDir(dir string) error {
 
 		// load on is supported extension. eg: ".tpl"
 		if _, has := r.extMap[ext]; has {
-			name := rel[0 : len(rel)-len(ext)]
+			name := filepath.ToSlash(rel[0 : len(rel)-len(ext)])
 			r.loadFile(name, path, r.EnableExtends)
 		}
 		return err
@@ -466,7 +466,7 @@ var nameRpl = strings.NewReplacer(":", ":\n", ",", "\n")
 // return string like: "tpl1, tpl2, tpl3"
 func (r *Renderer) TemplateNames(pretty ...bool) string {
 	str := r.root.DefinedTemplates()
-	if len(pretty) != 1 || pretty[0] == false {
+	if len(pretty) != 1 || !pretty[0] {
 		return str
 	}
 
